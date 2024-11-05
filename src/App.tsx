@@ -5,6 +5,8 @@ import LoginRegister from './components/base/LoginRegister';
 import Landing from './components/base/Landing';
 import Logout from './components/base/Logout';
 import { ModalProvider } from './components/base/useInfoModal';
+import SavedConversationsPage from './components/SavedConversationsPage';
+import AccountPage from './components/AccountPage';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
 
           { /* Restricted access - authentication required */ }
           <Route path="/chat" element={ <Authenticator component={ <Home /> } /> } />
+          <Route path="/chat/saved" element={ <Authenticator component={ <SavedConversationsPage /> } /> } />
+          <Route path="/account" element={ <Authenticator component={ <AccountPage /> } /> } />
         </Routes>
       </Router>
     </ModalProvider>
