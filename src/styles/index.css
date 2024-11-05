@@ -32,3 +32,9 @@ code {
   width: 100vw;
   height: 100vh;
 }
+
+:root {
+  --primary-blue: #0084FF;
+  --secondary-blue: #D3E9FF;
+  --white: #FFFFFF;
+}
