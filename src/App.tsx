@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Authenticator from './components/base/Authenticator';
-import Home from './components/base/Home';
+import Chat from './components/Chat';
 import LoginRegister from './components/base/LoginRegister';
 import Landing from './components/base/Landing';
 import Logout from './components/base/Logout';
@@ -19,7 +19,7 @@ function App() {
           <Route path="/logout" element={ <Logout /> } />
 
           { /* Restricted access - authentication required */ }
-          <Route path="/chat" element={ <Authenticator component={ <Home /> } /> } />
+          <Route path="/chat" element={ <Authenticator component={ <Chat language="Romanian" /> } /> } />
           <Route path="/chat/saved" element={ <Authenticator component={ <SavedConversationsPage /> } /> } />
           <Route path="/account" element={ <Authenticator component={ <AccountPage /> } /> } />
         </Routes>

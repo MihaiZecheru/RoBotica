@@ -1,0 +1,34 @@
+.chat-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100vw;
+}
+
+.chat-window {
+  height: 50vh;
+  width: 50vw;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.chat-input-large-container {
+  width: 100%;
+  height: 100%;
+}
+
+.chat-input-small-container {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  bottom: 0;
+  width: calc(100% - 2rem);
+  padding-bottom: .5rem;
+}
+
+.chat-input {
+  width: 80vw;
+  margin: .5rem;
+}
