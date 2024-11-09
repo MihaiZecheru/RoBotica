@@ -41,7 +41,15 @@ const NewChatPage = ({ language, user }: Props) => {
     }
   }, [messages, botIstyping]);
 
-  setTimeout(() => chatInputRef.current?.focus(), 0);
+  useEffect(() => {
+    setTimeout(() => chatInputRef.current?.focus(), 0);
+
+    // If the page was refreshed, the conversation_id will be in local storage
+    if (conversation_id === null && sessionStorage.getItem('conversation_id') && sessionStorage.getItem('messages')) {
+      setConversationID(sessionStorage.getItem('conversation_id') as ConversationID);
+      setMessages(JSON.parse(sessionStorage.getItem('messages')!));
+    }
+  }, []);
 
   const send_message = () => {
     const msg = chatInputRef.current!.value;
@@ -51,6 +59,7 @@ const NewChatPage = ({ language, user }: Props) => {
     setInputDisabled(true);
     const new_messages = [...messages, { content: msg, is_bot: false }];
     setMessages(new_messages);
+    sessionStorage.setItem('messages', JSON.stringify(new_messages));
 
     // Timestamp making sure the bot is typing for at least 500ms
     const start_time = Date.now();
@@ -61,6 +70,7 @@ const NewChatPage = ({ language, user }: Props) => {
     if (conversation_id === null) {
       Database.CreateConversation().then((id: ConversationID) => {
         setConversationID(id);
+        sessionStorage.setItem('conversation_id', id);
         _conversation_id = id;
         Database.AddMessageToConversation(msg, id, false);
       });
@@ -77,6 +87,7 @@ const NewChatPage = ({ language, user }: Props) => {
       
       setBotIsTyping(false);
       setMessages([...new_messages, { content: response, is_bot: true }]);
+      sessionStorage.setItem('messages', JSON.stringify([...new_messages, { content: response, is_bot: true }]));
       setInputDisabled(false);
       setTimeout(() => chatInputRef.current?.focus(), 0);
       Database.AddMessageToConversation(
@@ -91,6 +102,8 @@ const NewChatPage = ({ language, user }: Props) => {
     // the user sends the first message.
     setConversationID(null);
     _conversation_id = null;
+    sessionStorage.removeItem('conversation_id');
+    sessionStorage.removeItem('messages');
     setMessages([]);
     setTimeout(() => chatInputRef.current?.focus(), 0);
   };
@@ -131,6 +144,7 @@ const NewChatPage = ({ language, user }: Props) => {
               onKeyDown={ (e) => {
                 if (e.key === 'Enter') send_message();
               } }
+              inputProps={{ maxLength: 150 }}
             />
             <SendButton onClick={send_message} />
           </div>
