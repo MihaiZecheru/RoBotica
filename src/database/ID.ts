@@ -6,3 +6,6 @@ type Branded<T, B> = T & Brand<B>;
 
 type ID = Branded<`${string}-${string}-${string}-${string}`, "ID">;
 export type UserID = Branded<ID, "UserID">;
+
+export type ConversationID = Branded<ID, "ConversationID">;
+export type MessageID = Branded<ID, "MessageID">;

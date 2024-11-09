@@ -7,7 +7,7 @@
 }
 
 .chat-window {
-  height: 50vh;
+  height: 75vh;
   width: 50vw;
   padding: 1rem;
   display: flex;
@@ -19,7 +19,25 @@
   height: 100%;
 }
 
-.chat-input-small-container {
+.chat-messages-container {
+  height: calc(100% - 3rem); /* the input box is 3rem tall */
+  overflow-y: scroll;
+  margin: -1rem;
+  padding: 1rem;
+  padding-bottom: 0;
+  box-shadow: inset 0 -10px 10px -10px rgba(0, 0, 0, 0.2); /* Shadow at the bottom */
+  transition: box-shadow 0.3s ease;
+}
+
+.chat-messages-container:hover {
+  box-shadow: inset 0 -10px 10px -10px rgba(0, 0, 0, 0.4);
+}
+
+.chat-messages-container::-webkit-scrollbar {
+  display: none;
+}
+
+.chat-input-box {
   display: flex;
   align-items: center;
   position: absolute;

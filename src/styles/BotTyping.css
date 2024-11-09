@@ -1,0 +1,51 @@
+/* Container for the ellipsis */
+.loading-container {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  width: 80px;
+  height: 24px;
+  margin-left: .25rem;
+}
+
+/* Individual dots */
+.loading-dot {
+  position: absolute;
+  width: 10px;  /* Dot size */
+  height: 10px;  /* Dot size */
+  border-radius: 50%;
+  background-color: var(--primary-blue);
+  animation: ellipsis-animation 1.4s infinite ease-in-out;
+}
+
+/* Delay the dots to create the animation */
+.loading-dot:nth-child(1) {
+  left: 0;
+  animation-delay: 0s;
+}
+
+.loading-dot:nth-child(2) {
+  left: 20px;  /* Adjust space between dots */
+  animation-delay: 0.2s;
+}
+
+.loading-dot:nth-child(3) {
+  left: 40px;  /* Adjust space between dots */
+  animation-delay: 0.4s;
+}
+
+/* Keyframes to create the ellipsis animation */
+@keyframes ellipsis-animation {
+  0%, 20% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
