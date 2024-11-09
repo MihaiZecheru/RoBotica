@@ -3,8 +3,8 @@
   font-size: 1rem;
   background: royalblue;
   color: white;
-  padding: 0.7em 1em;
-  padding-left: 0.9em;
+  padding: 0.7rem 1rem;
+  padding-left: 0.9rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -15,12 +15,14 @@
   cursor: pointer;
   width: 150px;
   height: 40px;
-  padding-right: 2rem;
+  padding-right: 3.5rem;
+  transform: scale(0.8);
 }
 
 .send-button span {
   display: block;
-  margin-left: 0.3em;
+  margin-left: 0.3rem!important;
+  margin-right: 0.3rem!important;
   transition: all 0.3s ease-in-out;
 }
 
@@ -36,11 +38,11 @@
 }
 
 .send-button:hover svg {
-  transform: translateX(1.2em) rotate(45deg) scale(1.1);
+  transform: translateX(1.2rem) rotate(45deg) scale(1.1);
 }
 
 .send-button:hover span {
-  transform: translateX(5em);
+  transform: translateX(5rem);
 }
 
 .send-button:active {
@@ -49,10 +51,10 @@
 
 @keyframes fly-1 {
   from {
-    transform: translateY(0.1em);
+    transform: translateY(0.1rem);
   }
 
   to {
-    transform: translateY(-0.1em);
+    transform: translateY(-0.1rem);
   }
 }

@@ -108,8 +108,16 @@ const NewChatPage = ({ language, user }: Props) => {
     setTimeout(() => chatInputRef.current?.focus(), 0);
   };
 
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    // Focus input on Ctrl+/
+    if (e.ctrlKey && (e.key === '/' || e.key === 'k')) {
+      e.preventDefault();
+      chatInputRef.current?.focus();
+    }
+  };
+
   return (
-    <div className="chat-page">
+    <div className="chat-page" onKeyDown={onKeyDown} tabIndex={0}>
       <Paper elevation={3} className="chat-window" sx={{ borderRadius: '1rem', position: 'relative' }} >
         <div className='chat-input-large-container'>
           <div className='chat-messages-container' ref={chatMessageContainer}>
@@ -127,7 +135,14 @@ const NewChatPage = ({ language, user }: Props) => {
           </div>
 
           <div className='chat-input-box'>
-            <Avatar className="chat-avatar" alt='pfp' src={user?.user_metadata.avatar_url || './default-user-avatar.png'} />
+            <div style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '.5rem' }}>
+              <Avatar
+                className="chat-avatar"
+                alt='pfp'
+                src={user?.user_metadata.avatar_url || './default-user-avatar.png'}
+                sx={{ width: "27px!important", height: "27px!important" }}
+              />
+            </div>
             <Input
               inputRef={chatInputRef}
               autoCorrect="off"
