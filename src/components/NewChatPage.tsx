@@ -9,8 +9,8 @@ import Database from '../database/Database';
 import UserMessage from './UserMessage';
 import { AuthenticatedComponentDefaultProps } from './base/Authenticator';
 import { ConversationID } from '../database/ID';
-import GetBotResponseToMessage from '../functions/GetBotResponse';
 import BotTyping from './BotTyping';
+import Bot from '../functions/Bot';
 
 const MINIMUM_BOT_TYPING_TIME: number = 2000; // ms
 
@@ -78,7 +78,7 @@ const NewChatPage = ({ language, user }: Props) => {
       Database.AddMessageToConversation(msg, conversation_id!, false);
     }
 
-    GetBotResponseToMessage(msg, language, user_skill, user_gender, messages).then(async (response: string) => {
+    Bot.GetBotResponseToMessage(msg, language, user_skill, user_gender, messages).then(async (response: string) => {
       const end_time = Date.now();
       const time_diff = end_time - start_time;
       if (time_diff < MINIMUM_BOT_TYPING_TIME) {
