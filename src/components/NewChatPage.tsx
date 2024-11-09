@@ -19,10 +19,11 @@ interface Props extends AuthenticatedComponentDefaultProps {
 }
 
 const NewChatPage = ({ language, user }: Props) => {
+  const starting_message = { content: GetStartingGreeting(language), is_bot: true };
   const chatInputRef = useRef<HTMLInputElement>(null);
   const chatMessageContainer = useRef<HTMLDivElement>(null);
   const [conversation_id, setConversationID] = useState<ConversationID | null>(null);
-  const [messages, setMessages] = useState<Array<{ content: string, is_bot: boolean }>>([{ content: GetStartingGreeting(language), is_bot: true }]);
+  const [messages, setMessages] = useState<Array<{ content: string, is_bot: boolean }>>([starting_message]);
   const [botIstyping, setBotIsTyping] = useState<boolean>(false);
   const [inputDisabled, setInputDisabled] = useState<boolean>(false);
   const user_skill: 'beginner' | 'intermediate' = 'beginner';
@@ -100,11 +101,11 @@ const NewChatPage = ({ language, user }: Props) => {
   const createNewConversation = () => {
     // Do not create the new conversation in the DB right away, because it will be created when
     // the user sends the first message.
-    setConversationID(null);
-    _conversation_id = null;
     sessionStorage.removeItem('conversation_id');
     sessionStorage.removeItem('messages');
-    setMessages([]);
+    setConversationID(null);
+    _conversation_id = null;
+    setMessages([starting_message]);
     setTimeout(() => chatInputRef.current?.focus(), 0);
   };
 
@@ -113,6 +114,19 @@ const NewChatPage = ({ language, user }: Props) => {
     if (e.ctrlKey && (e.key === '/' || e.key === 'k')) {
       e.preventDefault();
       chatInputRef.current?.focus();
+    } else if (e.key === 'Enter') {
+      const sel = window.getSelection()?.toString().trim();
+      if (sel?.length === 0) return;
+      e.preventDefault();
+      // TODO: here do the sentences and definition of the selection
+      // If the selection is one word, define it and given an example sentence
+      // If the selection is a sentence / phrase, just translate it.
+      // Bot.GetDefinitionAndExample(sel!, language).then((response: string) => {
+      //   console.log(response); // TODO:
+      // });
+      // Bot.GetTranslation(sel!, language).then((response: string) => {
+      //   console.log(response); // TODO:
+      // });
     }
   };
 

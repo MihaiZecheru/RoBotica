@@ -50,3 +50,7 @@
   width: 80vw;
   margin: .5rem;
 }
+
+.chat-page:focus {
+  outline: none;
+}
