@@ -1,0 +1,4 @@
+.clickable-word:hover {
+  color: var(--primary-blue);
+  cursor: pointer;
+}
