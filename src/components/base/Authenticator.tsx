@@ -1,4 +1,4 @@
-import { cloneElement, useEffect, useState } from 'react';
+import { cloneElement, useEffect, useState, ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
 import GetUser from '../../database/GetUser';
@@ -12,7 +12,7 @@ export interface AuthenticatedComponentDefaultProps {
 }
 
 interface Props {
-  component: React.ReactElement;
+  component: ReactElement;
 }
 
 const Authenticator = ({ component }: Props) => {
