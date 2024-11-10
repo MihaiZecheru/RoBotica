@@ -18,7 +18,7 @@ interface Props extends AuthenticatedComponentDefaultProps {
   language: TLanguage;
 }
 
-const NewChatPage = ({ language, user }: Props) => {
+const ChatPage = ({ language, user }: Props) => {
   const starting_message = { content: GetStartingGreeting(language), is_bot: true };
   const chatInputRef = useRef<HTMLInputElement>(null);
   const chatMessageContainer = useRef<HTMLDivElement>(null);
@@ -28,7 +28,7 @@ const NewChatPage = ({ language, user }: Props) => {
   const [inputDisabled, setInputDisabled] = useState<boolean>(false);
   const user_skill: 'beginner' | 'intermediate' = 'beginner';
   const user_gender: 'woman' | 'man' = 'man';
-  
+
   // Used for when a message is sent during a new conversation
   // The user will not have a conversation ID until the first message is sent,
   // And the setState won't set the conversation_id until the send_message function is done running,
@@ -176,4 +176,4 @@ const NewChatPage = ({ language, user }: Props) => {
   );
 }
  
-export default NewChatPage;
+export default ChatPage;
