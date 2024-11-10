@@ -2,3 +2,8 @@
   color: var(--primary-blue);
   cursor: pointer;
 }
+
+.clickable-word::selection {
+  background-color: var(--secondary-blue);
+  color: black;
+}
