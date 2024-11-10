@@ -25,9 +25,10 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
         `Your message contains no mistakes. Great job!`
       );
     } else {
+      const s = mistake_count > 1 ? 's' : '';
       showInfoModal(
         `${language} Grammar & Spelling Check`,
-        `Your message contains ${mistake_count} mistakes. Here is the corrected message:\n\n${result}`,
+        `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\n${result}\n${content}`,
       );
     }
   };
