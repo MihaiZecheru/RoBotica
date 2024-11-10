@@ -4,6 +4,7 @@ import TTranslationAndExamples from "../database/TTranslationAndExamples";
 import Bot from "../functions/Bot";
 import useInfoModal from "./base/useInfoModal";
 import '../styles/clickable-word.css';
+import { Tooltip } from "@mui/material";
 
 interface Props {
   /**
@@ -42,7 +43,9 @@ const ClickableWord = ({ word, language }: Props) => {
   };
   
   return (
-    <span onClick={handleClick} className="clickable-word">{word} </span>
+    <Tooltip title="Translate word" placement="top-start">
+      <span onClick={handleClick} className="clickable-word">{word} </span>
+    </Tooltip>
   );
 }
  
