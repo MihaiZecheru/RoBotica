@@ -27,8 +27,13 @@ const ClickableWord = ({ word, language }: Props) => {
     const word_no_punctuation = word.replace(/[.,\/#!\?$%\^&\*;:{}=\-_`~()]/g, '').toLowerCase();
     Database.GetTranslationAndExamples(word_no_punctuation, language).then(async (response: TTranslationAndExamples | null) => {
       if (response === null) {
-        response = await Bot.GenerateTranslationAndExamplesForWord(word_no_punctuation, language);
-        Database.AddTranslationAndExample(response);
+        try {
+          response = await Bot.GenerateTranslationAndExamplesForWord(word_no_punctuation, language);
+          Database.AddTranslationAndExample(response);
+        } catch (e: any) {
+          showInfoModal('Error', e.message);
+          return;
+        }
       }
 
       showInfoModal(
