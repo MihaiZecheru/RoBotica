@@ -167,7 +167,11 @@ const NewChatPage = ({ language, user }: Props) => {
         </div>
       </Paper>
 
-      <Button type='button' onClick={createNewConversation} sx={{ position: 'fixed', bottom: '1rem', left: '1rem' }}>New Conversation</Button>
+      {
+        /* only show button if user is not on mobile */
+        window.innerWidth > 768 &&
+        <Button type='button' onClick={createNewConversation} sx={{ position: 'fixed', bottom: '1rem', left: '1rem' }}>New Conversation</Button>
+      }
     </div>
   );
 }
