@@ -34,7 +34,7 @@ const Authenticator = ({ component }: Props) => {
         navigate('/login');
       }
     })();
-  }, [navigate, user]);
+  }, [navigate]);
 
   return (
     <>
