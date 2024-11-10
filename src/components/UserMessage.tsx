@@ -1,6 +1,8 @@
-import { Avatar, Paper } from "@mui/material";
+import { Avatar, Paper, Tooltip } from "@mui/material";
 import ClickableWord from "./ClickableWord";
 import TLanguage from "../database/TLanguage";
+import useInfoModal from "./base/useInfoModal";
+import Bot from "../functions/Bot";
 
 interface Props {
   content: string;
@@ -9,10 +11,31 @@ interface Props {
 }
 
 const UserMessage = ({ content, language, avatar_url }: Props) => {
+  const showInfoModal = useInfoModal();
+
+  /**
+   * Perform a grammar and spelling check on the user's message. To be used on the Avatar's onClick event.
+   */
+  const performGrammarAndSpellingCheckOnAvatarClick = async () => {
+    const { mistake_count, result } = await Bot.PerformGrammarAndSpellingCheck(content, language);
+
+    if (mistake_count === 0) {
+      showInfoModal(
+        `${language} Grammar & Spelling Check`,
+        `Your message contains no mistakes. Great job!`
+      );
+    } else {
+      showInfoModal(
+        `${language} Grammar & Spelling Check`,
+        `Your message contains ${mistake_count} mistakes. Here is the corrected message:\n\n${result}`,
+      );
+    }
+  };
+
   return (
     <Paper className="user-message" elevation={2} sx={{ borderRadius: '1rem', padding: '.5rem', marginBottom: '1rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-        <div style={{ margin: '.25rem', marginLeft: '.5rem', fontWeight: 900 }} className="blue-highlight-color">
+        <div style={{ margin: '.25rem', marginLeft: '.5rem', fontWeight: 900 }}>
           {
             content.split(' ').map((word: string, index: number) => 
               <ClickableWord key={index} word={word} language={language} />
@@ -20,12 +43,15 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
           }
         </div>
         <div style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Avatar
-            className="chat-avatar"
-            alt='pfp'
-            src={ avatar_url || './user-avatar.png' }
-            sx={{ width: "27px!important", height: "27px!important" }}
-          />
+          <Tooltip title="Perform grammar & spelling check" placement="top-end">
+            <Avatar
+              className="chat-avatar"
+              alt='pfp'
+              src={ avatar_url || './user-avatar.png' }
+              sx={{ width: "27px!important", height: "27px!important", cursor: 'pointer' }}
+              onClick={performGrammarAndSpellingCheckOnAvatarClick}
+            />
+          </Tooltip>
         </div>
       </div>
     </Paper>
