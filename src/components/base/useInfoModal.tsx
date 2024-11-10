@@ -59,17 +59,17 @@ const InfoModal: React.FC<InfoModalProps> = ({ state, onClose }) => {
     <Dialog
       open={state?.open || false}
       onClose={onClose}
-      aria-labelledby="error-dialog-title"
-      aria-describedby="error-dialog-description"
+      aria-labelledby="info-dialog-title"
+      aria-describedby="info-dialog-description"
       sx={{
         '& .MuiDialog-paper': {
           minWidth: 'min(425px, 80vw)',
         },
       }}
     >
-      <DialogTitle id="error-dialog-title">{state?.title || ''}</DialogTitle>
+      <DialogTitle id="info-dialog-title">{state?.title || ''}</DialogTitle>
       <DialogContent>
-        <DialogContentText id="error-dialog-description">
+        <DialogContentText id="info-dialog-description" sx={{ fontFamily: 'Comfortaa', whiteSpace: 'pre-line', lineHeight: '1' }}>
           {state?.message || ''}
         </DialogContentText>
       </DialogContent>
