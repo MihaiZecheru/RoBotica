@@ -84,4 +84,25 @@ export default class Bot {
       example_sentence2_translation
     };
   }
+
+  /**
+   * Generate an English translation for a message in a given language.
+   * 
+   * @param message The message in `language` to translate to Englush.
+   * @param language The language the message is in. 
+   * @returns The English translation of the message.
+   */
+  public static async GenerateMessageTranslation(message: string, language: TLanguage): Promise<string> {
+    const response = await openAI.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        "role": "system",
+        "content": `Translate the message "${message}" from ${language} to English. 
+        Be more literal in your translations (ex: 'Buna ziua' is 'good day' not 'hello'). 
+        Give just the translation, nothing else. Do not wrap in quotes or anything.`
+      }]
+    });
+
+    return response.choices[0].message.content!;
+  }
 }
