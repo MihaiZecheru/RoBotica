@@ -160,7 +160,7 @@ const NewChatPage = ({ language, user }: Props) => {
               onKeyDown={ (e) => {
                 if (e.key === 'Enter') send_message();
               } }
-              inputProps={{ maxLength: 150 }}
+              inputProps={{ maxLength: 150, sx: { '::placeholder': { userSelect: 'none' } }}}
             />
             <SendButton onClick={send_message} />
           </div>
