@@ -1,7 +1,0 @@
-.blue-highlight-color::selection {
-  color: var(--primary-blue);
-}
-
-.blue-highlight-color {
-  cursor: pointer;
-}
