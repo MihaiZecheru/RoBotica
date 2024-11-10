@@ -154,7 +154,7 @@ export default class Bot {
     // in case the corrected version is missing a word or has an extra word.
 
     // Does not strip the hyphen (-) because it is used in compound words.
-    const strip_punctuation = (str: string) => str.replace(/[.,\/#!$%\^&\*;:{}=_`~()]/g, '');
+    const strip_punctuation = (str: string) => str.replace(/[.,/#!$%^&*;:{}=_`~()]/g, '');
     const strip_diactritics = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
     // Split both strings into word arrays

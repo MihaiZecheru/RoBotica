@@ -24,7 +24,7 @@ const ClickableWord = ({ word, language }: Props) => {
    * from the database, if it exists, otherwise generate it and add it to the database.
    */
   const handleClick = () => {
-    const word_no_punctuation = word.replace(/[.,\/#!\?$%\^&\*;:{}=\-_`~()]/g, '').toLowerCase();
+    const word_no_punctuation = word.replace(/[.,/#!?$%^&*;:{}=-_`~()]/g, '').toLowerCase();
     Database.GetTranslationAndExamples(word_no_punctuation, language).then(async (response: TTranslationAndExamples | null) => {
       if (response === null) {
         try {
