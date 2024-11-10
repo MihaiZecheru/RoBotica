@@ -50,7 +50,7 @@ const NewChatPage = ({ language, user }: Props) => {
       setConversationID(sessionStorage.getItem('conversation_id') as ConversationID);
       setMessages(JSON.parse(sessionStorage.getItem('messages')!));
     }
-  }, []);
+  }, [conversation_id]);
 
   const send_message = () => {
     const msg = chatInputRef.current!.value;
@@ -114,19 +114,6 @@ const NewChatPage = ({ language, user }: Props) => {
     if (e.ctrlKey && (e.key === '/' || e.key === 'k')) {
       e.preventDefault();
       chatInputRef.current?.focus();
-    } else if (e.key === 'Enter') {
-      const sel = window.getSelection()?.toString().trim();
-      if (sel?.length === 0) return;
-      e.preventDefault();
-      // TODO: here do the sentences and definition of the selection
-      // If the selection is one word, define it and given an example sentence
-      // If the selection is a sentence / phrase, just translate it.
-      // Bot.GetDefinitionAndExample(sel!, language).then((response: string) => {
-      //   console.log(response); // TODO:
-      // });
-      // Bot.GetTranslation(sel!, language).then((response: string) => {
-      //   console.log(response); // TODO:
-      // });
     }
   };
 
@@ -138,9 +125,9 @@ const NewChatPage = ({ language, user }: Props) => {
             {
               messages.map((message: { content: string, is_bot: boolean }, index: number) => {
                 if (message.is_bot) {
-                  return <BotMessage key={index} content={message.content} />;
+                  return <BotMessage key={index} content={message.content} language={language} />;
                 } else {
-                  return <UserMessage key={index} content={message.content} avatar_url={user?.user_metadata.avatar_url} />;
+                  return <UserMessage key={index} content={message.content} language={language} avatar_url={user?.user_metadata.avatar_url} />;
                 }
               })
             }
