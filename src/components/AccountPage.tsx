@@ -1,10 +1,6 @@
 import { AuthenticatedComponentDefaultProps } from "./base/Authenticator";
 
-interface Props extends AuthenticatedComponentDefaultProps {
-
-}
-
-const AccountPage = ({ user }: Props) => {
+const AccountPage = ({ user }: AuthenticatedComponentDefaultProps) => {
   return (
     <div>
       <h1>Account Page</h1>
