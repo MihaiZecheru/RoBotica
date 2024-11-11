@@ -74,7 +74,7 @@ const LoginRegister: React.FC = () => {
 
     API.RegisterUserAsync(email, password).then((successful: boolean) => {
       if (successful) {
-        navigate('/home');
+        navigate('/chat');
       } else {
         showInfoModal('Failed to register', 'Internal server error. Please contact the developer.');
       }
@@ -104,7 +104,7 @@ const LoginRegister: React.FC = () => {
 
     API.LoginUserAsync(email, password).then((successful: boolean) => {
       if (successful) {
-        navigate('/home');
+        navigate('/chat');
       } else {
         showInfoModal('Login failed', 'Email or password is incorrect');
       }
