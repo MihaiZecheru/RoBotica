@@ -15,7 +15,7 @@
 }
 
 /* Fullscreen on mobile */
-@media (max-width: 768px) {
+@media (max-width: 769px) {
   .chat-window {
     height: 95vh;
     width: 95vw;
