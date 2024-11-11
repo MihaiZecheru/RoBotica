@@ -17,6 +17,7 @@ code {
 #root {
   height: 100vh;
   width: 100vw;
+  overflow: hidden;
 }
 
 .no-highlight {
@@ -37,4 +38,9 @@ code {
   --primary-blue: #0084FF;
   --secondary-blue: #D3E9FF;
   --white: #FFFFFF;
+}
+
+.hide-scrollbar-y {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
