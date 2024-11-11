@@ -24,7 +24,7 @@ const StoryView = ({ language, title, body, backToSearch }: Props) => {
                 <div key={index}>
                   {
                     paragraph.split(' ').map((word: string, index: number) => 
-                      <ClickableWord key={index} word={word} language={language} />
+                      <ClickableWord key={index + 700} word={word} language={language} />
                     )
                   }
                 </div>
