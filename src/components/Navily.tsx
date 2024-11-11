@@ -8,7 +8,9 @@ const Navily = () => {
   return (
     <div className="navily-container">
       <Stack direction="column" spacing={2}>
-        <div className="image-container"><img src="/navily.png" /></div>
+        <div className="image-container">
+          <img src="/navily.png" style={{ width: '256px', height: '256px' }} />
+        </div>
         <Box className="navily-item" onClick={() => navigate('/chat')}>Chat</Box>
         <Box className="navily-item" onClick={() => navigate('/reading')}>Reading</Box>
         <Box className="navily-item" onClick={() => navigate('/chat/saved')}>Saved Chats</Box>
