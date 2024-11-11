@@ -152,7 +152,52 @@ export default class Database {
     });
   }
 
-  public static async GetStory(story_id: StoryID): Promise<TStory> {
-    return {} as TStory;
+  /**
+   * Get all stories from the database that are written in `language`
+   * @returns 
+   */
+  public static async GetAllStories(language: TLanguage): Promise<TStory[]> {
+    const { data, error } = await supabase
+      .from('Stories')
+      .select('*')
+      .eq('language', language);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    return data.map((story: any) => {
+      return {
+        id: story.id as StoryID,
+        language: story.language as TLanguage,
+        title: story.title,
+        body: story.body
+      };
+    });
+  }
+
+  /**
+   * Insert a story into the Stories table in the database
+   * 
+   * @param story The story to add to the Stories table in the database
+   * @returns The ID of the newly-inserted story
+   */
+  public static async UploadStory(story: Omit<TStory, 'id'>): Promise<StoryID> {
+    const { data, error } = await supabase
+      .from('Stories')
+      .insert([{
+        language: story.language,
+        title: story.title,
+        body: story.body
+      }])
+      .select('id');
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    return data[0].id as StoryID;
   }
 }

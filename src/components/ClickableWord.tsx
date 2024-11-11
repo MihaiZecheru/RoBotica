@@ -5,6 +5,7 @@ import Bot from "../functions/Bot";
 import useInfoModal from "./base/useInfoModal";
 import '../styles/clickable-word.css';
 import { Tooltip } from "@mui/material";
+import { useState } from "react";
 
 interface Props {
   /**
@@ -19,12 +20,16 @@ interface Props {
  */
 const ClickableWord = ({ word, language }: Props) => {
   const showInfoModal = useInfoModal();
+  const [canBeClicked, setCanBeClicked] = useState<boolean>(true);
+
   /**
    * When the word is clicked, get the translation and example sentence for the word
    * from the database, if it exists, otherwise generate it and add it to the database.
    */
   const handleClick = () => {
-    const word_no_punctuation = word.replace(/[.,/#!?$%^&*;:{}=-_`~()]/g, '').toLowerCase();
+    if (!canBeClicked) return;
+    setCanBeClicked(false);
+    const word_no_punctuation = word.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\-\_\`\~\(\)]/g, '').toLowerCase();
     Database.GetTranslationAndExamples(word_no_punctuation, language).then(async (response: TTranslationAndExamples | null) => {
       if (response === null) {
         try {
@@ -44,6 +49,7 @@ const ClickableWord = ({ word, language }: Props) => {
         ${response.example_sentence2}\n
         (${response.example_sentence2_translation})`
       );
+      setCanBeClicked(true);
     });
   };
   

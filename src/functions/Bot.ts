@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import TLanguage from "../database/TLanguage";
 import TTranslationAndExamples from "../database/TTranslationAndExamples";
+import TStory from "../database/TStory";
 
 const openAI = new OpenAI({ apiKey: process.env.REACT_APP_OPENAI_API_KEY!, dangerouslyAllowBrowser: true, organization: process.env.REACT_APP_OPENAI_ORG_ID, project: process.env.REACT_APP_OPENAI_PROJECT_ID });
 const HISTORY_SIZE = 15;
@@ -50,7 +51,6 @@ export default class Bot {
    * @returns The translation and two example sentences. TTranslationAndExamples
    */
   public static async GenerateTranslationAndExamplesForWord(word: string, language: TLanguage): Promise<TTranslationAndExamples> {
-    console.log(word);
     const response = await openAI.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{
@@ -154,7 +154,7 @@ export default class Bot {
     // in case the corrected version is missing a word or has an extra word.
 
     // Does not strip the hyphen (-) because it is used in compound words.
-    const strip_punctuation = (str: string) => str.replace(/[.,/#!$%^&*;:{}=_`~()]/g, '');
+    const strip_punctuation = (str: string) => str.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\-\_\`\~\(\)]/g, '');
     const strip_diactritics = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
     // Split both strings into word arrays
@@ -189,6 +189,42 @@ export default class Bot {
 
     // Return the edit distance between the two strings
     return dp[originalWords.length][correctedWords.length];
-}
+  }
 
+  /**
+   * Generate a short story that follows the given `synopsis` in `language` with AI.
+   * This function is not part of the main application.
+   * It is used in GenerateAndUploadStory.ts to generate stories for the database,
+   * which is done by the admin when he wants to add more stories.
+   * 
+   * @param language The language the story should be in
+   * @param synopsis Frame for the story. The story will adhere to the synopsis.
+   * @returns The generated story language, title, and body
+   */
+  public static async GenerateStory(language: TLanguage, synopsis: string): Promise<Omit<TStory, 'id'>> {
+    console.log(`GENERATING STORY IN ${language} ON: ${synopsis}`);
+    const response = await openAI.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        "role": "system",
+        "content": `Generate a short story in ${language} with the following synopsis: ${synopsis}. 
+        Make it interesting and engaging. Make it 5-10 paragraphs long. Title the story, too.
+        Use modern language; do not use archaic words, phrases, or verb tenses. 
+        Write less-formally, but not too casually. The story is not meant for kids. It can be sad/dark. 
+        Do not always have a happy ending. Have a realistic ending.
+        ${language === 'Romanian' ? 'Do not use the word "său". Use "lui" instead. Do not use "deși" either.' : ''}
+        Do not wrap the title in quotes or anything. The output should be in the following format:
+        
+        Title:
+        Story:
+        
+        You MUST contain the word 'Title:' and 'Story:' in your response.`
+      }]
+    });
+
+    const message = response.choices[0].message.content!;
+    const match = message.match(new RegExp(/(Title|Titlu|Título|Titulo|Titel|Titre|Titolo|):(.*)\s+(Story|Poveste|Historia|Geschichte|Histoire|Storia|História):\s+(.*)/, 's'));
+    if (!match) throw new Error('Could not interpret response from AI. Try again. Here was the message: ' + message);
+    return { title: match[2].trim(), body: match[4].trim(), language };
+  }
 }

@@ -28,7 +28,7 @@ const SavedChatsPage = ({ user }: AuthenticatedComponentDefaultProps) => {
     getConversationPreviews().then((conversations) => {
       if (conversations) setSavedChats(conversations);
     });
-  }, [user]);
+  }, [user, navigate]);
   
   return (
     <div className="saved-chats" style={{

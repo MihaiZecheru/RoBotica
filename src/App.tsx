@@ -8,6 +8,7 @@ import { ModalProvider } from './components/base/useInfoModal';
 import AccountPage from './components/AccountPage';
 import Navily from './components/Navily';
 import SavedChatsPage from './components/SavedChatsPage';
+import ReadingPage from './components/Reading';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
           <Route path="/chat" element={ <Authenticator component={ <ChatPage language="Romanian" /> } /> } />
           <Route path="/chat/saved" element={ <Authenticator component={ <SavedChatsPage /> } /> } />
           <Route path="/account" element={ <Authenticator component={ <AccountPage /> } /> } />
+          <Route path="/reading" element={ <Authenticator component={ <ReadingPage language="Romanian" /> } /> } />
         </Routes>
       </Router>
     </ModalProvider>
