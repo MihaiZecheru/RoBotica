@@ -9,3 +9,4 @@ export type UserID = Branded<ID, "UserID">;
 
 export type ConversationID = Branded<ID, "ConversationID">;
 export type MessageID = Branded<ID, "MessageID">;
+export type StoryID = Branded<ID, "StoryID">;

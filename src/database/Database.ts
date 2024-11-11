@@ -1,8 +1,9 @@
-import { ConversationID } from "./ID";
+import { ConversationID, StoryID, UserID } from "./ID";
 import supabase from "./supabase-config";
 import TTranslationAndExamples from "./TTranslationAndExamples";
 import TLanguage from "./TLanguage";
 import TMessage from "./TMessage";
+import TStory from "./TStory";
 
 export default class Database {
 
@@ -98,5 +99,60 @@ export default class Database {
       console.error(error);
       throw error;
     }
+  }
+
+  /**
+   * Get all conversations and their messages
+   * 
+   * @param user_id The ID of the user
+   * @returns The user's conversations, including messages
+   */
+  public static async GetAllUserConversations(user_id: UserID): Promise<Array<{
+    id: ConversationID,
+    last_bot_msg: string,
+    last_user_msg: string,
+    all_messages: Array<{
+      content: string;
+      is_bot: boolean;
+    }>
+  }> | null> {
+    const { data, error } = await supabase
+      .from('Conversations')
+      .select(`
+        id,
+        user_id,
+        created_at,
+        Messages(id, message_content, is_bot, created_at)
+      `)
+      .eq('user_id', user_id);
+
+    if (error) {
+      console.error("Error fetching messages:", error.message);
+      return null;
+    }
+
+    if (!data) return null;
+
+    return data.map((conversation: any) => {
+      const msgs = conversation.Messages.sort((a: any, b: any) => {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime(); // oldest to newest
+      });
+
+      return {
+        id: conversation.id as ConversationID,
+        last_bot_msg: msgs[msgs.length - 1].message_content,
+        last_user_msg: msgs[msgs.length - 2].message_content,
+        all_messages: msgs.map((msg: any) => {
+          return {
+            content: msg.message_content,
+            is_bot: msg.is_bot
+          };
+        })
+      }
+    });
+  }
+
+  public static async GetStory(story_id: StoryID): Promise<TStory> {
+    return {} as TStory;
   }
 }

@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { AuthenticatedComponentDefaultProps } from "./base/Authenticator";
 import SavedChat from "./SavedChat";
 import supabase from "../database/supabase-config";
-import { ConversationID } from "../database/ID";
+import { ConversationID, UserID } from "../database/ID";
 import { Button, Paper } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import Database from "../database/Database";
 
 type ConversationPreview = {
   id: ConversationID;
@@ -18,41 +19,8 @@ const SavedChatsPage = ({ user }: AuthenticatedComponentDefaultProps) => {
   const [savedChats, setSavedChats] = useState<ConversationPreview[]>([]);
   
   async function getConversationPreviews(): Promise<ConversationPreview[] | null> {
-    const { data, error } = await supabase
-      .from('Conversations')
-      .select(`
-        id,
-        user_id,
-        created_at,
-        Messages(id, message_content, is_bot, created_at)
-      `)
-      .eq('user_id', user?.id);
-
-    if (error) {
-      console.error("Error fetching messages:", error.message);
-      return null;
-    }
-  
-    if (!data) return null;
-
-    return data.map((conversation: any) => {
-      const msg_count = conversation.Messages.length;
-      const msgs = conversation.Messages.sort((a: any, b: any) => {
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime(); // oldest to newest
-      });
-
-      return {
-        id: conversation.id as ConversationID,
-        last_bot_msg: msgs[msg_count - 1].message_content,
-        last_user_msg: msgs[msg_count - 2].message_content,
-        all_messages: msgs.map((msg: any) => {
-          return {
-            content: msg.message_content,
-            is_bot: msg.is_bot
-          };
-        })
-      }
-    });
+    if (!user) return null;
+    return await Database.GetAllUserConversations(user.id as UserID)
   }
 
   useEffect(() => {
