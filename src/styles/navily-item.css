@@ -1,0 +1,33 @@
+.navily-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 5rem;
+  margin-left: 5rem;
+  height: 100vh;
+  user-select: none;
+}
+
+.navily-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 5px;
+  color: white;
+  background-color: var(--primary-blue);
+  transition: all 0.3s;
+  cursor: pointer;
+  font-weight: 900;
+  width: 50vw;
+  user-select: none;
+}
+
+.image-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  user-select: none;
+}

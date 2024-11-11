@@ -1,4 +1,4 @@
-import { Avatar, Button, Input, Paper } from '@mui/material';
+import { Avatar, Button, Input, Paper, Tooltip } from '@mui/material';
 import '../styles/chat-page.css';
 import { useEffect, useRef, useState } from 'react';
 import SendButton from './SendButton';
@@ -11,6 +11,7 @@ import { AuthenticatedComponentDefaultProps } from './base/Authenticator';
 import { ConversationID } from '../database/ID';
 import BotTyping from './BotTyping';
 import Bot from '../functions/Bot';
+import { useNavigate } from 'react-router-dom';
 
 const MINIMUM_BOT_TYPING_TIME: number = 2000; // ms
 
@@ -19,6 +20,7 @@ interface Props extends AuthenticatedComponentDefaultProps {
 }
 
 const ChatPage = ({ language, user }: Props) => {
+  const navigate = useNavigate();
   const starting_message = { content: GetStartingGreeting(language), is_bot: true };
   const chatInputRef = useRef<HTMLInputElement>(null);
   const chatMessageContainer = useRef<HTMLDivElement>(null);
@@ -48,7 +50,7 @@ const ChatPage = ({ language, user }: Props) => {
     // If the page was refreshed, the conversation_id will be in local storage
     if (conversation_id === null && sessionStorage.getItem('conversation_id') && sessionStorage.getItem('messages')) {
       setConversationID(sessionStorage.getItem('conversation_id') as ConversationID);
-      setMessages(JSON.parse(sessionStorage.getItem('messages')!));
+      setMessages([starting_message, ...JSON.parse(sessionStorage.getItem('messages')!)]);
     }
   }, [conversation_id]);
 
@@ -137,12 +139,15 @@ const ChatPage = ({ language, user }: Props) => {
 
           <div className='chat-input-box'>
             <div style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '.5rem' }}>
-              <Avatar
-                className="chat-avatar"
-                alt='pfp'
-                src={user?.user_metadata.avatar_url || './default-user-avatar.png'}
-                sx={{ width: "27px!important", height: "27px!important" }}
-              />
+              <Tooltip title="Open navily" placement="top-start">
+                <Avatar
+                  className="chat-avatar"
+                  alt='pfp'
+                  src={user?.user_metadata.avatar_url || '/default-user-avatar.png'}
+                  sx={{ width: "27px!important", height: "27px!important", cursor: 'pointer' }}
+                  onClick={() => navigate('/navily')}
+                />
+              </Tooltip>
             </div>
             <Input
               inputRef={chatInputRef}
@@ -169,8 +174,14 @@ const ChatPage = ({ language, user }: Props) => {
 
       {
         /* only show button if user is not on mobile */
-        window.innerWidth > 768 &&
+        window.innerWidth > 769 &&
         <Button type='button' onClick={createNewConversation} sx={{ position: 'fixed', bottom: '1rem', left: '1rem' }}>New Conversation</Button>
+      }
+
+      {
+        /* only show button if user is not on mobile */
+        window.innerWidth > 769 &&
+        <Button type='button' onClick={() => navigate('/navily')} sx={{ position: 'fixed', bottom: '1rem', right: '1rem' }}>Navily</Button>
       }
     </div>
   );
