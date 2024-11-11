@@ -27,7 +27,7 @@ const BotMessage = ({ content, language }: Props) => {
           <Avatar
             className="chat-avatar"
             alt='pfp'
-            src='./robotica.png'
+            src='/robotica.png'
             onClick={translateBotMessageOnAvatarClick}
             sx={{ cursor: 'pointer' }}
           />
