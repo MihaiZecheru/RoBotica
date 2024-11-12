@@ -125,7 +125,8 @@ export default class Database {
         created_at,
         Messages(id, message_content, is_bot, created_at)
       `)
-      .eq('user_id', user_id);
+      .eq('user_id', user_id)
+      .order('created_at', { ascending: false }); // newest first
 
     if (error) {
       console.error("Error fetching messages:", error.message);
