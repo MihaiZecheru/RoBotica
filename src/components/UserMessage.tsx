@@ -48,7 +48,7 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
             <Avatar
               className="chat-avatar"
               alt='pfp'
-              src={ avatar_url || '/user-avatar.png' }
+              src={ avatar_url || '/default-user-avatar.png' }
               sx={{ width: "27px!important", height: "27px!important", cursor: 'pointer' }}
               onClick={performGrammarAndSpellingCheckOnAvatarClick}
             />
