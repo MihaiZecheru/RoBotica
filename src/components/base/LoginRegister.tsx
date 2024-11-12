@@ -36,6 +36,7 @@ const LoginRegister: React.FC = () => {
   };
 
   const handleRegister = () => {
+    sessionStorage.clear();
     const email: string | undefined = registerEmailRef.current?.value;
     const password: string | undefined = registerPasswordRef.current?.value;
     const confirmPassword: string | undefined = registerConfirmPasswordRef.current?.value;
@@ -89,6 +90,7 @@ const LoginRegister: React.FC = () => {
   };
 
   const handleLogin = () => {
+    sessionStorage.clear();
     const email: string | undefined = loginEmailRef.current?.value;
     const password: string | undefined = loginPasswordRef.current?.value;
 

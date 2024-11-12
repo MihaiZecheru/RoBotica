@@ -82,6 +82,7 @@ const SavedChatsPage = ({ user }: AuthenticatedComponentDefaultProps) => {
 
                     const newChats = savedChats.filter((_, i) => i !== index);
                     setSavedChats(newChats);
+                    sessionStorage.clear();
                   }}
                 />
               );
