@@ -50,7 +50,11 @@ const ChatPage = ({ language, user }: Props) => {
     // If the page was refreshed, the conversation_id will be in local storage
     if (conversation_id === null && sessionStorage.getItem('conversation_id') && sessionStorage.getItem('messages')) {
       setConversationID(sessionStorage.getItem('conversation_id') as ConversationID);
-      setMessages([starting_message, ...JSON.parse(sessionStorage.getItem('messages')!)]);
+      if (JSON.parse(sessionStorage.getItem('messages')!)[0].content !== starting_message.content) {
+        setMessages([starting_message, ...JSON.parse(sessionStorage.getItem('messages')!)]);
+      } else {
+        setMessages(JSON.parse(sessionStorage.getItem('messages')!));
+      }
     }
   }, [conversation_id]);
 
@@ -145,7 +149,10 @@ const ChatPage = ({ language, user }: Props) => {
                   alt='pfp'
                   src={user?.user_metadata.avatar_url || '/default-user-avatar.png'}
                   sx={{ width: "27px!important", height: "27px!important", cursor: 'pointer' }}
-                  onClick={() => navigate('/navily')}
+                  onClick={() => {
+                    sessionStorage.clear();
+                    navigate('/navily');
+                  }}
                 />
               </Tooltip>
             </div>
@@ -181,7 +188,10 @@ const ChatPage = ({ language, user }: Props) => {
       {
         /* only show button if user is not on mobile */
         window.innerWidth > 769 &&
-        <Button type='button' onClick={() => navigate('/navily')} sx={{ position: 'fixed', bottom: '1rem', right: '1rem' }}>Navily</Button>
+        <Button type='button' onClick={() => {
+          sessionStorage.clear();
+          navigate('/navily');
+        }} sx={{ position: 'fixed', bottom: '1rem', right: '1rem' }}>Navily</Button>
       }
     </div>
   );
