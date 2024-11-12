@@ -16,7 +16,7 @@ function App() {
       <Router>
         <Routes>
           { /* Unrestricted access */ }
-          <Route path="/" element={ <Authenticator component={ <Landing /> } /> } />
+          <Route path="/" element={ <Landing /> } />
           <Route path="/login" element={ <LoginRegister /> } />
           <Route path="/logout" element={ <Logout /> } />
           <Route path="/navily" element={ <Navily /> } />

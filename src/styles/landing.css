@@ -1,0 +1,38 @@
+.landing-message {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1rem;
+  margin-right: 2.5rem;
+}
+
+.landing-paper {
+  padding: 1rem;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.landing-paper h3 {
+  user-select: none;
+}
+
+.landing-image {
+  user-select: none;
+}
+
+.landing-cta-btn {
+  margin-left: 1rem!important;
+}
+
+button.landing-cta-btn {
+  background-color: var(--primary-blue);
+  color: white;
+}
+
+.landing-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
