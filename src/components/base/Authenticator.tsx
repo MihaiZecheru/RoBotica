@@ -1,7 +1,8 @@
 import { cloneElement, useEffect, useState, ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
-import GetUser from '../../database/GetUser';
+import GetUser, { GetUserSettings, TUserSettings } from '../../database/GetUser';
+import { UserID } from '../../database/ID';
 
 /**
  * Extend a component's props interface with this interface to add the user object.
@@ -9,6 +10,7 @@ import GetUser from '../../database/GetUser';
  */
 export interface AuthenticatedComponentDefaultProps {
   user?: User;
+  user_settings?: TUserSettings;
 }
 
 interface Props {
@@ -18,16 +20,19 @@ interface Props {
 const Authenticator = ({ component }: Props) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  const [user_settings, setUserSettings] = useState<TUserSettings | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         const _user = await GetUser();
-  
+        
         if (!_user) {
           navigate('/login');
         } else {
+          const _user_settings = await GetUserSettings(_user.id as UserID);
           setUser(_user);
+          setUserSettings(_user_settings);
         }
       } catch (error) {
         console.error('Error authenticating user: ', error);
@@ -38,7 +43,7 @@ const Authenticator = ({ component }: Props) => {
 
   return (
     <>
-      { user && cloneElement(component, { user }) }
+      { user && user_settings && cloneElement(component, { user, user_settings }) }
     </>
   );
 }

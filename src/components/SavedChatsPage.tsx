@@ -14,7 +14,7 @@ type ConversationPreview = {
   all_messages: Array<{ content: string, is_bot: boolean }>;
 };
 
-const SavedChatsPage = ({ user }: AuthenticatedComponentDefaultProps) => {
+const SavedChatsPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) => {
   const navigate = useNavigate();
   const [savedChats, setSavedChats] = useState<ConversationPreview[]>([]);
   
@@ -69,6 +69,7 @@ const SavedChatsPage = ({ user }: AuthenticatedComponentDefaultProps) => {
                   last_user_msg={chat.last_user_msg}
                   all_messages={chat.all_messages}
                   avatar_url={user?.user_metadata.avatar_url}
+                  language={user_settings?.language || 'Romanian'}
                   deleteChat={async () => {
                     const { error } = await supabase
                       .from('Conversations')

@@ -12,12 +12,12 @@ export default class Bot {
    * 
    * @param user_message The message to respond to.
    * @param language The language to respond in.
-   * @param user_skill The skill level of the user, either 'beginner' or 'intermediate'.
+   * @param user_skill The skill level of the user, either 'Beginner' or 'Intermediate'.
    * @param user_gender Whether the user is a man or a woman. Used for latin languages where gender matters.
    * @param past_messages The conversation history, exluding the message to respond to.
    * @returns The AI-generated bot response.
    */
-  public static async GetBotResponseToMessage(user_message: string, language: string, user_skill: 'beginner' | 'intermediate', user_gender: 'woman' | 'man', past_messages: Array<{ content: string, is_bot: boolean }>): Promise<string> {
+  public static async GetBotResponseToMessage(user_message: string, language: TLanguage, user_skill: 'Beginner' | 'Intermediate', user_gender: 'Woman' | 'Man', past_messages: Array<{ content: string, is_bot: boolean }>): Promise<string> {
     if (past_messages.length > HISTORY_SIZE) {
       past_messages = past_messages.slice(past_messages.length - HISTORY_SIZE);
     }
@@ -34,7 +34,7 @@ export default class Bot {
       model: "gpt-4o-mini",
       messages: [{
         "role": "system",
-        "content": `You are a native human ${language} speaker talking to a ${user_skill} ${user_gender}. Do not be formal. Be chill and very breif, only speak in ${language}. Swearing is encouraged.
+        "content": `You are a native human ${language === 'Spanish' ? 'Mexican ' : ''}${language} speaker talking to a ${user_skill} ${user_gender}. Do not be formal. Be chill and very breif, only speak in ${language}. Swearing is encouraged.
         Here is the conversation history: ${conversation_history}
         Respond to the user's last message given the context: ${user_message}`
       }]
@@ -56,6 +56,7 @@ export default class Bot {
       messages: [{
         "role": "system",
         "content": `Translate the word "${word}" from ${language} to English 
+        ${language === 'Spanish' ? 'Use mexican spanish' : ''}
 
         Then give two example sentences using the word "${word}" in ${language}, 
         and an English translation for each. 
@@ -108,7 +109,8 @@ export default class Bot {
       messages: [{
         "role": "system",
         "content": `Translate the message "${message}" from ${language} to English. 
-        Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello'). 
+        ${language === 'Spanish' ? 'Use mexican spanish' : ''} 
+        Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
         Give just the translation, nothing else. Do not wrap in quotes or anything.`
       }]
     });
@@ -124,21 +126,23 @@ export default class Bot {
    * @param language The language the message is in.
    * @returns The amount of mistakes contained in the message and the corrected message.
    */
-  public static async PerformGrammarAndSpellingCheck(message: string, language: TLanguage): Promise<{ mistake_count: number, result: string }> {
+  public static async PerformGrammarAndSpellingCheck(message: string, language: TLanguage): Promise<{ mistake_count: number, corrected_message: string }> {
     const response = await openAI.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{
         "role": "system",
         "content": `Given a message in ${language}, check for grammar and spelling mistakes by 
-        providing a corrected version of the message. Grammar mistakes do not include punctuation 
-        or capitalization, but include hyphen. Give the corrected message, and only the corrected message. 
+        providing a corrected version of the message. Punctuation and capitalization do not
+        constitute an error, but a missing hyphen does.
+        ${language === 'Romanian' ? "Be careful with correcting the hyphen. Make sure you use the hyphen properly! Example: it's 'jucătorul tău' not 'jucătorul-tău'" : ''}
+        Give the corrected message, and only the corrected message. 
         Nothing else, no quotations or nothing around the message. Here is the message: ${message}`
       }]
     });
 
     const corrected_message = response.choices[0].message.content!;
     const mistake_count = this.GetMistakeCount(message, corrected_message);
-    return { mistake_count, result: corrected_message };
+    return { mistake_count, corrected_message: corrected_message };
   }
 
   /**
@@ -154,7 +158,7 @@ export default class Bot {
     // in case the corrected version is missing a word or has an extra word.
 
     // Does not strip the hyphen (-) because it is used in compound words.
-    const strip_punctuation = (str: string) => str.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\-\_\`\~\(\)]/g, '');
+    const strip_punctuation = (str: string) => str.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\_\`\~\(\)\¡\¿]/g, '');
     const strip_diactritics = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
     // Split both strings into word arrays
@@ -213,6 +217,7 @@ export default class Bot {
         Write less-formally, but not too casually. The story is not meant for kids. It can be sad/dark. 
         Do not always have a happy ending. Have a realistic ending.
         ${language === 'Romanian' ? 'Do not use the word "său". Use "lui" instead. Do not use "deși" either.' : ''}
+        ${language === 'Spanish' ? 'Use mexican spanish' : ''}
         Do not wrap the title in quotes or anything. The output should be in the following format:
         
         Title:

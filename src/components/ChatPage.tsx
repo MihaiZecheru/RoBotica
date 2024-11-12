@@ -15,21 +15,15 @@ import { useNavigate } from 'react-router-dom';
 
 const MINIMUM_BOT_TYPING_TIME: number = 2000; // ms
 
-interface Props extends AuthenticatedComponentDefaultProps {
-  language: TLanguage;
-}
-
-const ChatPage = ({ language, user }: Props) => {
+const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) => {
   const navigate = useNavigate();
-  const starting_message = { content: GetStartingGreeting(language), is_bot: true };
+  const starting_message = { content: GetStartingGreeting(user_settings?.language || 'Romanian'), is_bot: true };
   const chatInputRef = useRef<HTMLInputElement>(null);
   const chatMessageContainer = useRef<HTMLDivElement>(null);
   const [conversation_id, setConversationID] = useState<ConversationID | null>(null);
   const [messages, setMessages] = useState<Array<{ content: string, is_bot: boolean }>>([starting_message]);
   const [botIstyping, setBotIsTyping] = useState<boolean>(false);
   const [inputDisabled, setInputDisabled] = useState<boolean>(false);
-  const user_skill: 'beginner' | 'intermediate' = 'beginner';
-  const user_gender: 'woman' | 'man' = 'man';
 
   // Used for when a message is sent during a new conversation
   // The user will not have a conversation ID until the first message is sent,
@@ -85,7 +79,7 @@ const ChatPage = ({ language, user }: Props) => {
       Database.AddMessageToConversation(msg, conversation_id!, false);
     }
 
-    Bot.GetBotResponseToMessage(msg, language, user_skill, user_gender, messages).then(async (response: string) => {
+    Bot.GetBotResponseToMessage(msg, user_settings?.language || 'Romanian', user_settings?.level || 'Beginner', user_settings?.gender || 'Man', messages).then(async (response: string) => {
       const end_time = Date.now();
       const time_diff = end_time - start_time;
       if (time_diff < MINIMUM_BOT_TYPING_TIME) {
@@ -131,9 +125,9 @@ const ChatPage = ({ language, user }: Props) => {
             {
               messages.map((message: { content: string, is_bot: boolean }, index: number) => {
                 if (message.is_bot) {
-                  return <BotMessage key={index} content={message.content} language={language} />;
+                  return <BotMessage key={index} content={message.content} language={user_settings?.language || 'Romanian'} />;
                 } else {
-                  return <UserMessage key={index} content={message.content} language={language} avatar_url={user?.user_metadata.avatar_url} />;
+                  return <UserMessage key={index} content={message.content} language={user_settings?.language || 'Romanian'} avatar_url={user?.user_metadata.avatar_url} />;
                 }
               })
             }

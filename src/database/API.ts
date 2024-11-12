@@ -16,6 +16,13 @@ export default class API {
     const { error } = await supabase.auth.signUp({ email, password });
 
     if (error) throw new Error(error.message);
+
+    const { error: settings_error } = await supabase
+      .from('UserSettings')
+      .insert({});
+
+    if (settings_error) throw new Error(settings_error.message);
+
     return true;
   }
 

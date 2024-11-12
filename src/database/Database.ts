@@ -4,6 +4,7 @@ import TTranslationAndExamples from "./TTranslationAndExamples";
 import TLanguage from "./TLanguage";
 import TMessage from "./TMessage";
 import TStory from "./TStory";
+import { TUserSettings } from "./GetUser";
 
 export default class Database {
 
@@ -199,5 +200,21 @@ export default class Database {
     }
 
     return data[0].id as StoryID;
+  }
+
+  public static async UpdateUserSettings(user_settings: TUserSettings, user_id: UserID): Promise<void> {
+    const { error } = await supabase
+      .from('UserSettings')
+      .update({
+        level: user_settings.level,
+        gender: user_settings.gender,
+        language: user_settings.language
+      })
+      .eq('user_id', user_id);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
   }
 }

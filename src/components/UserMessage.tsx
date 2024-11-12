@@ -17,18 +17,18 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
    * Perform a grammar and spelling check on the user's message. To be used on the Avatar's onClick event.
    */
   const performGrammarAndSpellingCheckOnAvatarClick = async () => {
-    const { mistake_count, result } = await Bot.PerformGrammarAndSpellingCheck(content, language);
+    const { mistake_count, corrected_message } = await Bot.PerformGrammarAndSpellingCheck(content, language);
 
     if (mistake_count === 0) {
       showInfoModal(
         `${language} Grammar & Spelling Check`,
-        `Your message contains no mistakes. Great job!`
+        `Your message contains no mistakes. Great job!\nCorrected vs original:\n\n${corrected_message}\n\n${content}`,
       );
     } else {
       const s = mistake_count > 1 ? 's' : '';
       showInfoModal(
         `${language} Grammar & Spelling Check`,
-        `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\n${result}\n${content}`,
+        `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\n${corrected_message}\n\n${content}`,
       );
     }
   };

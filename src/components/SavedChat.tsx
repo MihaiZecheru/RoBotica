@@ -3,6 +3,7 @@ import BotMessage from "./BotMessage";
 import UserMessage from "./UserMessage";
 import { ConversationID } from "../database/ID";
 import { useNavigate } from "react-router-dom";
+import TLanguage from "../database/TLanguage";
 
 interface Props {
   conversation_id: ConversationID;
@@ -11,9 +12,10 @@ interface Props {
   all_messages: Array<{ content: string, is_bot: boolean }>;
   avatar_url?: string;
   deleteChat: () => void;
+  language: TLanguage;
 }
 
-const SavedChat = ({ conversation_id, last_bot_msg, last_user_msg, avatar_url, all_messages, deleteChat }: Props) => {
+const SavedChat = ({ conversation_id, last_bot_msg, last_user_msg, avatar_url, all_messages, deleteChat, language }: Props) => {
   const navigate = useNavigate();
 
   const goToChat = () => {
@@ -28,9 +30,8 @@ const SavedChat = ({ conversation_id, last_bot_msg, last_user_msg, avatar_url, a
       width: '25vw',
     }}>
       <Stack direction='column' sx={{ display: 'flex', justifyContent: 'center', height: '100%' }}>
-        { /* TODO: FIX LANGUAGE */ }
-        <UserMessage content={last_user_msg} language="Romanian" avatar_url={avatar_url} />
-        <BotMessage content={last_bot_msg} language="Romanian" />
+        <UserMessage content={last_user_msg} language={language} avatar_url={avatar_url} />
+        <BotMessage content={last_bot_msg} language={language} />
         <Button variant="contained" color="primary" sx={{ width: '100%' }} onClick={goToChat}>View Chat</Button>
         <Button variant="contained" color="error" sx={{ width: '100%', marginTop: '.5rem' }} onClick={deleteChat}>Delete Chat</Button>
       </Stack>

@@ -6,14 +6,12 @@ import TStory from '../database/TStory';
 import TLanguage from '../database/TLanguage';
 import '../styles/reading-page.css';
 import { useNavigate } from 'react-router-dom';
+import { AuthenticatedComponentDefaultProps } from './base/Authenticator';
 
-interface Props {
-  language: TLanguage;
-}
-
-const ReadingPage = ({ language }: Props) => {
+const ReadingPage = ({ user_settings }: AuthenticatedComponentDefaultProps) => {
   const navigate = useNavigate();
   const [story, setStory] = useState<TStory | null>(null);
+  const language = user_settings?.language as TLanguage || 'Romanian';
 
   const storySelected = (story: TStory) => {
     setStory(story);

@@ -15,7 +15,7 @@ const Logout = () => {
   }, [navigate]);
 
   return (
-    <div>Logging out...</div>
+    <div style={{ margin: '1rem' }}>Logging out...</div>
   );
 }
  

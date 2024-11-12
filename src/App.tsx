@@ -22,11 +22,10 @@ function App() {
           <Route path="/navily" element={ <Navily /> } />
 
           { /* Restricted access - authentication required */ }
-          {/* TODO: do language properly */}
-          <Route path="/chat" element={ <Authenticator component={ <ChatPage language="Romanian" /> } /> } />
+          <Route path="/chat" element={ <Authenticator component={ <ChatPage /> } /> } />
           <Route path="/chat/saved" element={ <Authenticator component={ <SavedChatsPage /> } /> } />
           <Route path="/account" element={ <Authenticator component={ <AccountPage /> } /> } />
-          <Route path="/reading" element={ <Authenticator component={ <ReadingPage language="Romanian" /> } /> } />
+          <Route path="/reading" element={ <Authenticator component={ <ReadingPage /> } /> } />
         </Routes>
       </Router>
     </ModalProvider>
