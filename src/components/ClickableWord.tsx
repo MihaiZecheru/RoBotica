@@ -29,7 +29,7 @@ const ClickableWord = ({ word, language }: Props) => {
   const handleClick = () => {
     if (!canBeClicked) return;
     setCanBeClicked(false);
-    const word_no_punctuation = word.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\-\_\`\~\(\)\¡\¿]/g, '').toLowerCase();
+    const word_no_punctuation = word.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\_\`\~\(\)\¡\¿\"\”]/g, '').toLowerCase();
     Database.GetTranslationAndExamples(word_no_punctuation, language).then(async (response: TTranslationAndExamples | null) => {
       if (response === null) {
         try {
