@@ -3,6 +3,7 @@ import ClickableWord from "./ClickableWord";
 import TLanguage from "../database/TLanguage";
 import useInfoModal from "./base/useInfoModal";
 import Bot from "../functions/Bot";
+import { useState } from "react";
 
 interface Props {
   content: string;
@@ -11,13 +12,17 @@ interface Props {
 
 const BotMessage = ({ content, language }: Props) => {
   const showInfoModal = useInfoModal();
+  const [avatarCanBeClicked, setAvatarCanBeClicked] = useState<boolean>(true);
 
   /**
    * Translate the entire bot's message. To be used on the Avatar's onClick event.
    */
   const translateBotMessageOnAvatarClick = async () => {
+    if (!avatarCanBeClicked) return;
+    setAvatarCanBeClicked(false);
     const translation = await Bot.GenerateMessageTranslation(content, language);
     showInfoModal(`${language} Message Translation`, `${content}\n\n${translation}`);
+    setAvatarCanBeClicked(true);
   };
 
   return (

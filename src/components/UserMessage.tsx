@@ -3,6 +3,7 @@ import ClickableWord from "./ClickableWord";
 import TLanguage from "../database/TLanguage";
 import useInfoModal from "./base/useInfoModal";
 import Bot from "../functions/Bot";
+import { useState } from "react";
 
 interface Props {
   content: string;
@@ -12,11 +13,15 @@ interface Props {
 
 const UserMessage = ({ content, language, avatar_url }: Props) => {
   const showInfoModal = useInfoModal();
+  const [avatarCanBeClicked, setAvatarCanBeClicked] = useState<boolean>(true);
 
   /**
    * Perform a grammar and spelling check on the user's message. To be used on the Avatar's onClick event.
    */
   const performGrammarAndSpellingCheckOnAvatarClick = async () => {
+    if (!avatarCanBeClicked) return;
+    setAvatarCanBeClicked(false);
+
     const { mistake_count, corrected_message } = await Bot.PerformGrammarAndSpellingCheck(content, language);
 
     if (mistake_count === 0) {
@@ -31,6 +36,8 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
         `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\n${corrected_message}\n\n${content}`,
       );
     }
+
+    setAvatarCanBeClicked(true);
   };
 
   return (
