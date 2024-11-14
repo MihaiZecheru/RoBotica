@@ -23,7 +23,7 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
     if (!avatarCanBeClicked) return;
     setAvatarCanBeClicked(false);
 
-    const min_duration = 1000;
+    const min_duration = 500;
     const startTime = new Date().getTime();
     const { mistake_count, corrected_message } = await Bot.PerformGrammarAndSpellingCheck(content, language);
 

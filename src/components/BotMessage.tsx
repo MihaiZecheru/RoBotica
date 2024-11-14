@@ -22,7 +22,7 @@ const BotMessage = ({ content, language }: Props) => {
     if (!avatarCanBeClicked) return;
     setAvatarCanBeClicked(false);
 
-    const min_duration = 1000;
+    const min_duration = 500;
     const startTime = new Date().getTime();
 
     const translation = await Bot.GenerateMessageTranslation(content, language);

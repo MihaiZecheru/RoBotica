@@ -31,7 +31,7 @@ const ClickableWord = ({ word, language }: Props) => {
     if (!canBeClicked) return;
     setCanBeClicked(false);
 
-    const min_duration = 1000;
+    const min_duration = 500;
     const startTime = new Date().getTime();
 
     const word_cleaned = word.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\_\`\~\(\)\¡\¿\"\”]/g, '').toLowerCase().trim();
@@ -68,7 +68,7 @@ const ClickableWord = ({ word, language }: Props) => {
   
   return (
     <>
-    <Tooltip title="Translate word" placement="top-start">
+    <Tooltip title="Translate word" placement="right-end">
       <span onClick={handleClick} className="clickable-word">{word} </span>
     </Tooltip>
     { !canBeClicked && <Loading /> }
