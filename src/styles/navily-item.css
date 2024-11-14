@@ -31,3 +31,8 @@
   width: 100%;
   user-select: none;
 }
+
+.navily-container > .MuiStack-root {
+  display: flex;
+  align-items: center;
+}
