@@ -56,7 +56,7 @@ export default class Database {
    */
   public static async GetTranslationAndExamples(word: string, language: TLanguage): Promise<TTranslationAndExamples | null> {
     const { data, error } = await supabase
-      .from('TranslationAndExamples')
+      .from('WordTranslationAndExamples')
       .select('translation,example_sentence1,example_sentence2,example_sentence1_translation,example_sentence2_translation')
       .eq('word', word)
       .eq('language', language);
@@ -85,7 +85,7 @@ export default class Database {
    */
   public static async AddTranslationAndExample(translation_and_examples: TTranslationAndExamples): Promise<void> {
     const { error } = await supabase
-      .from('TranslationAndExamples')
+      .from('WordTranslationAndExamples')
       .insert([{
         word: translation_and_examples.word,
         language: translation_and_examples.language,
@@ -212,6 +212,44 @@ export default class Database {
         language: user_settings.language
       })
       .eq('user_id', user_id);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the translation for a sentence in a story if it exists, otherwise return null.
+   * 
+   * @param sentence The sentence to get the translation for 
+   * @param language The language the sentence is in
+   * @returns The sentence's translation if it exists in the DB, otherwise null.
+   */
+  public static async GetStorySentenceTranslation(sentence: string, language: TLanguage): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('StorySentenceTranslation')
+      .select('translation')
+      .eq('sentence', sentence)
+      .eq('language', language);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    if (data.length === 0) return null;
+    return data[0].translation;
+  }
+
+  public static async AddStorySentenceTranslation(sentence: string, language: TLanguage, translation: string): Promise<void> {
+    const { error } = await supabase
+      .from('StorySentenceTranslation')
+      .insert([{
+        sentence,
+        language,
+        translation
+      }]);
 
     if (error) {
       console.error(error);

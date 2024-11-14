@@ -1,0 +1,9 @@
+.translate-sentence-icon {
+  cursor: pointer;
+  font-size: 1rem!important;
+  vertical-align: middle;
+}
+
+.translate-sentence-icon:hover {
+  color: var(--primary-blue);
+}

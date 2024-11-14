@@ -2,6 +2,7 @@ import { Button } from '@mui/material';
 import ClickableWord from './ClickableWord';
 import TLanguage from '../database/TLanguage';
 import '../styles/reading-page.css';
+import ClickableSentence from './ClickableSentence';
 
 interface Props {
   language: TLanguage;
@@ -11,6 +12,15 @@ interface Props {
    * Goes back to the story-search page.
    */
   backToSearch: () => void;
+}
+
+function getStartOfSentence(paragraph: string, index: number): number {
+  const words = paragraph.split(' ');
+  let i = index - 1;
+  while (i > 0 && !words[i].endsWith('.')) {
+    i--;
+  }
+  return i == 0 ? 0 : i + 1;
 }
 
 const StoryView = ({ language, title, body, backToSearch }: Props) => {
@@ -23,8 +33,18 @@ const StoryView = ({ language, title, body, backToSearch }: Props) => {
               <div>
                 <div key={index}>
                   {
-                    paragraph.split(' ').map((word: string, index: number) => 
-                      <ClickableWord key={index + 700} word={word} language={language} />
+                    paragraph.split(' ').map((word: string, index: number) => {
+                      // If the word is the end of a sentence, make the period be a ClickableSentence.
+                      // When the period is clicked, the entire sentence will be translated.
+                      if (word.endsWith('.')) {
+                        return <>
+                          <ClickableWord key={index + 700} word={word.substring(0, word.length - 1)} language={language} />
+                          <ClickableSentence key={index + 700 + "-sentence" } language={language} sentence={paragraph.split(' ').slice(getStartOfSentence(paragraph, index), index + 1).join(' ')} />
+                        </>;
+                      } else {
+                        return <ClickableWord key={index + 700} word={word} language={language} />;
+                      }
+                    }
                     )
                   }
                 </div>
