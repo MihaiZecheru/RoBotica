@@ -132,8 +132,7 @@ export default class Bot {
       messages: [{
         "role": "system",
         "content": `Given a message in ${language}, check for grammar and spelling mistakes by 
-        providing a corrected version of the message. Punctuation and capitalization do not
-        constitute an error, but a missing hyphen does.
+        providing a corrected version of the message.
         ${language === 'Romanian' ? "Be careful with correcting the hyphen. Make sure you use the hyphen properly! Example: it's 'jucătorul tău' not 'jucătorul-tău'" : ''}
         Give the corrected message, and only the corrected message. 
         Nothing else, no quotations or nothing around the message. Here is the message: ${message}`
