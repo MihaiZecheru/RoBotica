@@ -69,7 +69,7 @@ const ClickableWord = ({ word, language }: Props) => {
   return (
     <>
     <Tooltip title="Translate word" placement="right-end">
-      <span onClick={handleClick} className="clickable-word">{word} </span>
+      <span onClick={handleClick} className="clickable-word">{word}{' '}</span>
     </Tooltip>
     { !canBeClicked && <Loading /> }
     </>
