@@ -4,6 +4,7 @@ import TLanguage from "../database/TLanguage";
 import useInfoModal from "./base/useInfoModal";
 import Bot from "../functions/Bot";
 import { useState } from "react";
+import Loading from "./Loading";
 
 interface Props {
   content: string;
@@ -20,32 +21,48 @@ const BotMessage = ({ content, language }: Props) => {
   const translateBotMessageOnAvatarClick = async () => {
     if (!avatarCanBeClicked) return;
     setAvatarCanBeClicked(false);
+
+    const min_duration = 1000;
+    const startTime = new Date().getTime();
+
     const translation = await Bot.GenerateMessageTranslation(content, language);
-    showInfoModal(`${language} Message Translation`, `${content}\n\n${translation}`);
-    setAvatarCanBeClicked(true);
+
+    const showResult = () => {
+      showInfoModal(`${language} Message Translation`, `${content}\n\n${translation}`);
+      setAvatarCanBeClicked(true);
+    };
+
+    if (new Date().getTime() - startTime < min_duration) {
+      setTimeout(showResult, min_duration - (new Date().getTime() - startTime));
+    } else {
+      showResult();
+    }
   };
 
   return (
-    <Paper className="bot-message" elevation={2} sx={{ borderRadius: '1rem', padding: '.5rem', marginBottom: '1rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <Tooltip title="Translate message" placement="top-start">
-          <Avatar
-            className="chat-avatar"
-            alt='pfp'
-            src='/robotica.png'
-            onClick={translateBotMessageOnAvatarClick}
-            sx={{ cursor: 'pointer' }}
-          />
-        </Tooltip>
-        <div style={{ margin: '.25rem', fontWeight: 900 }}>
-          {
-            content.split(' ').map((word: string, index: number) => 
-              <ClickableWord key={index} word={word} language={language} />
-            )
-          }
+    <>
+      <Paper className="bot-message" elevation={2} sx={{ borderRadius: '1rem', padding: '.5rem', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Tooltip title="Translate message" placement="top-start">
+            <Avatar
+              className="chat-avatar"
+              alt='pfp'
+              src='/robotica.png'
+              onClick={translateBotMessageOnAvatarClick}
+              sx={{ cursor: 'pointer' }}
+            />
+          </Tooltip>
+          <div style={{ margin: '.25rem', fontWeight: 900 }}>
+            {
+              content.split(' ').map((word: string, index: number) => 
+                <ClickableWord key={index} word={word} language={language} />
+              )
+            }
+          </div>
         </div>
-      </div>
-    </Paper>
+      </Paper>
+      { !avatarCanBeClicked && <Loading />}
+    </>
   );
 }
  

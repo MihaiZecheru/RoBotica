@@ -1,0 +1,17 @@
+.loading-spinner-container {
+  position: fixed!important;
+  top: 0;
+  left: 0;
+  width: 100vw!important;
+  height: 100vh!important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgb(0, 0, 0, 0.2);
+  margin: 0!important;
+  z-index: 999;
+}
+
+.loading-spinner-container svg {
+  color: var(--primary-blue);
+}
