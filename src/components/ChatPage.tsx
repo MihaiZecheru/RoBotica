@@ -175,13 +175,13 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
 
       {
         /* only show button if user is not on mobile */
-        window.innerWidth > 769 &&
+        window.innerWidth >= 769 &&
         <Button type='button' onClick={createNewConversation} sx={{ position: 'fixed', bottom: '1rem', left: '1rem' }}>New Conversation</Button>
       }
 
       {
         /* only show button if user is not on mobile */
-        window.innerWidth > 769 &&
+        window.innerWidth >= 769 &&
         <Button type='button' onClick={() => {
           sessionStorage.clear();
           navigate('/navily');
