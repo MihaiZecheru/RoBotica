@@ -1,6 +1,6 @@
 import { Stack, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import '../styles/navily-item.css';
+import '../styles/navily.css';
 
 const Navily = () => {
   const navigate = useNavigate();
