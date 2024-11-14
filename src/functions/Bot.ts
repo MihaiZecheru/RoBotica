@@ -178,8 +178,8 @@ export default class Bot {
     for (let i = 1; i <= originalWords.length; i++) {
         for (let j = 1; j <= correctedWords.length; j++) {
             // Strip punctuation and diacritics, and compare words
-            const originalWord = strip_punctuation(strip_diactritics(originalWords[i - 1].toLowerCase()));
-            const correctedWord = strip_punctuation(strip_diactritics(correctedWords[j - 1].toLowerCase()));
+            const originalWord = strip_punctuation(strip_diactritics(originalWords[i - 1].toLowerCase())).trim();
+            const correctedWord = strip_punctuation(strip_diactritics(correctedWords[j - 1].toLowerCase())).trim();
 
             const cost = originalWord === correctedWord ? 0 : 1;
 

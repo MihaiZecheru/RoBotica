@@ -6,6 +6,7 @@ import useInfoModal from "./base/useInfoModal";
 import '../styles/clickable-word.css';
 import { Tooltip } from "@mui/material";
 import { useState } from "react";
+import Loading from "./Loading";
 
 interface Props {
   /**
@@ -29,11 +30,15 @@ const ClickableWord = ({ word, language }: Props) => {
   const handleClick = () => {
     if (!canBeClicked) return;
     setCanBeClicked(false);
-    const word_no_punctuation = word.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\_\`\~\(\)\¡\¿\"\”]/g, '').toLowerCase();
-    Database.GetTranslationAndExamples(word_no_punctuation, language).then(async (response: TTranslationAndExamples | null) => {
+
+    const min_duration = 1000;
+    const startTime = new Date().getTime();
+
+    const word_cleaned = word.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\_\`\~\(\)\¡\¿\"\”]/g, '').toLowerCase().trim();
+    Database.GetTranslationAndExamples(word_cleaned, language).then(async (response: TTranslationAndExamples | null) => {
       if (response === null) {
         try {
-          response = await Bot.GenerateTranslationAndExamplesForWord(word_no_punctuation, language);
+          response = await Bot.GenerateTranslationAndExamplesForWord(word_cleaned, language);
           Database.AddTranslationAndExample(response);
         } catch (e: any) {
           showInfoModal('Error', e.message);
@@ -41,22 +46,33 @@ const ClickableWord = ({ word, language }: Props) => {
         }
       }
 
-      showInfoModal(
-        `${language} Translation`,
-        `"${word_no_punctuation}" means "${response.translation}".\n\n
-        ${response.example_sentence1}\n
-        (${response.example_sentence1_translation})\n\n
-        ${response.example_sentence2}\n
-        (${response.example_sentence2_translation})`
-      );
-      setCanBeClicked(true);
+      const showResult = () => {
+        showInfoModal(
+          `${language} Translation`,
+          `"${word_cleaned}" means "${response!.translation}".\n\n
+          ${response!.example_sentence1}\n
+          (${response!.example_sentence1_translation})\n\n
+          ${response!.example_sentence2}\n
+          (${response!.example_sentence2_translation})`
+        );
+        setCanBeClicked(true);
+      };
+
+      if (new Date().getTime() - startTime < min_duration) {
+        setTimeout(showResult, min_duration - (new Date().getTime() - startTime));
+      } else {
+        showResult();
+      }
     });
   };
   
   return (
+    <>
     <Tooltip title="Translate word" placement="top-start">
       <span onClick={handleClick} className="clickable-word">{word} </span>
     </Tooltip>
+    { !canBeClicked && <Loading /> }
+    </>
   );
 }
  
