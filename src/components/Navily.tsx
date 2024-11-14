@@ -7,7 +7,6 @@ const Navily = () => {
   const navigate = useNavigate();
 
   const handleImgClick = async () => {
-    console.log(await GetUserID(), process.env.REACT_APP_ADMIN_ID);
     if ((await GetUserID()) === process.env.REACT_APP_ADMIN_ID) {
       navigate('/create-story');
     }
