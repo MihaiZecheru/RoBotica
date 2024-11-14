@@ -76,7 +76,12 @@ const StoryView = (_: AuthenticatedComponentDefaultProps) => {
                       if (word.endsWith('.')) {
                         return <>
                           <ClickableWord key={index + "b"} word={word.substring(0, word.length - 1)} language={story.language} />
-                          <ClickableSentence key={index + "-sentence" } language={story.language} sentence={paragraph.split(' ').slice(getStartOfSentence(paragraph, index), index + 1).join(' ')} />
+                          <ClickableSentence
+                            key={index + "-sentence" }
+                            language={story.language}
+                            story_id={story_id as StoryID}
+                            sentence={paragraph.split(' ').slice(getStartOfSentence(paragraph, index), index + 1).join(' ')}
+                          />
                         </>;
                       } else {
                         return <ClickableWord key={index + "ba"} word={word} language={story.language} />;

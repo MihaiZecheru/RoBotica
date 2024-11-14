@@ -226,12 +226,13 @@ export default class Database {
    * @param language The language the sentence is in
    * @returns The sentence's translation if it exists in the DB, otherwise null.
    */
-  public static async GetStorySentenceTranslation(sentence: string, language: TLanguage): Promise<string | null> {
+  public static async GetStorySentenceTranslation(sentence: string, language: TLanguage, story_id: StoryID): Promise<string | null> {
     const { data, error } = await supabase
       .from('StorySentenceTranslation')
       .select('translation')
       .eq('sentence', sentence)
-      .eq('language', language);
+      .eq('language', language)
+      .eq('story_id', story_id);
 
     if (error) {
       console.error(error);
@@ -242,12 +243,13 @@ export default class Database {
     return data[0].translation;
   }
 
-  public static async AddStorySentenceTranslation(sentence: string, language: TLanguage, translation: string): Promise<void> {
+  public static async AddStorySentenceTranslation(sentence: string, language: TLanguage, story_id: StoryID, translation: string): Promise<void> {
     const { error } = await supabase
       .from('StorySentenceTranslation')
       .insert([{
         sentence,
         language,
+        story_id,
         translation
       }]);
 
