@@ -108,6 +108,9 @@ const StoriesSearch = ({ user_settings }: AuthenticatedComponentDefaultProps) =>
       <div className='results-count-display'>
         <span>Showing {filteredStories.length}/{stories.length} results</span>
       </div>
+      <div style={{ position: 'fixed', bottom: '5px', right: '.75rem' }}>
+        <Button color="primary" onClick={() => navigate('/navily')}>Navily</Button>
+      </div>
     </div>
   );
 }

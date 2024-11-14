@@ -100,6 +100,9 @@ const StoryView = (_: AuthenticatedComponentDefaultProps) => {
           }}
         >Back to search</Button>
       </div>
+      <div style={{ position: 'fixed', bottom: '12px', right: '.75rem' }}>
+        <Button color="primary" onClick={() => navigate('/navily')}>Navily</Button>
+      </div>
     </div>
   );
 }
