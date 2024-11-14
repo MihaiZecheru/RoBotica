@@ -60,7 +60,8 @@ export default class Bot {
 
         Then give two example sentences using the word "${word}" in ${language}, 
         and an English translation for each. 
-        Be more literal in your translations (ex: 'Bună  ziua' is 'good day' not 'hello'). 
+        Be more literal in your translations (ex: 'Bună  ziua' is 'good day' not 'hello'), but not too literal (ex in spanish: 'humor' is 'mood', not 'humor'). 
+        If the word has multiple meanings, use one meaning for the first sentence, and another meaning for the second sentence.
         
         Response format is strictly the following, you must use the format exactly as is:
         
