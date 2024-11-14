@@ -10,6 +10,7 @@ import Navily from './components/Navily';
 import SavedChatsPage from './components/SavedChatsPage';
 import StoriesSearch from './components/StoriesSearch';
 import StoryView from './components/StoryView';
+import CreateStoryPage from './components/CreateStoryPage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <Route path="/account" element={ <Authenticator component={ <AccountPage /> } /> } />
           <Route path="/reading" element={ <Authenticator component={ <StoriesSearch /> } /> } />
           <Route path="/reading/:id" element={ <Authenticator component={ <StoryView /> } /> } />
+          <Route path="/create-story" element={ <Authenticator component={ <CreateStoryPage /> } /> } />
         </Routes>
       </Router>
     </ModalProvider>
