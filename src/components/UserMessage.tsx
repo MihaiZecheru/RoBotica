@@ -27,13 +27,13 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
     if (mistake_count === 0) {
       showInfoModal(
         `${language} Grammar & Spelling Check`,
-        `Your message contains no mistakes. Great job!\nCorrected vs original:\n\n${corrected_message}\n\n${content}`,
+        `Your message contains no mistakes. Great job!\nCorrected vs original:\n\nC: ${corrected_message}\n\nO: ${content}\n\nNote that the bot sometimes makes wrong corrections.`,
       );
     } else {
       const s = mistake_count > 1 ? 's' : '';
       showInfoModal(
         `${language} Grammar & Spelling Check`,
-        `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\n${corrected_message}\n\n${content}`,
+        `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\nC: ${corrected_message}\n\nO:${content}\n\nNote that the bot sometimes makes wrong corrections.`,
       );
     }
 
