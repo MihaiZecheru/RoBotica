@@ -8,7 +8,8 @@ import { ModalProvider } from './components/base/useInfoModal';
 import AccountPage from './components/AccountPage';
 import Navily from './components/Navily';
 import SavedChatsPage from './components/SavedChatsPage';
-import ReadingPage from './components/Reading';
+import StoriesSearch from './components/StoriesSearch';
+import StoryView from './components/StoryView';
 
 function App() {
   return (
@@ -25,7 +26,8 @@ function App() {
           <Route path="/chat" element={ <Authenticator component={ <ChatPage /> } /> } />
           <Route path="/chat/saved" element={ <Authenticator component={ <SavedChatsPage /> } /> } />
           <Route path="/account" element={ <Authenticator component={ <AccountPage /> } /> } />
-          <Route path="/reading" element={ <Authenticator component={ <ReadingPage /> } /> } />
+          <Route path="/reading" element={ <Authenticator component={ <StoriesSearch /> } /> } />
+          <Route path="/reading/:id" element={ <Authenticator component={ <StoryView /> } /> } />
         </Routes>
       </Router>
     </ModalProvider>

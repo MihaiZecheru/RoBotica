@@ -21,9 +21,7 @@
   width: 80%!important;
   overflow-y: auto;
   padding: 1rem;
-  box-shadow: 
-    inset 0 10px 10px -10px rgba(0, 0, 0, 0.2), /* Shadow at the top */
-    inset 0 -10px 10px -10px rgba(0, 0, 0, 0.2); /* Shadow at the bottom */
+  margin-top: 1rem!important;
 }
 
 .stories-container::-webkit-scrollbar {
@@ -55,6 +53,8 @@
   font-weight: 900;
   overflow-y: auto;
   max-height: calc(100% - 2.68rem - 2.20rem - 2.28rem - 1rem);
+  box-shadow: inset 0 -10px 10px -10px rgba(0, 0, 0, 0.2);;
+  
 }
 
 .story-title-and-word-count {

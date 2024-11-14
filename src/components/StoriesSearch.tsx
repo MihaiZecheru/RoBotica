@@ -4,13 +4,13 @@ import '../styles/reading-page.css';
 import { useEffect, useRef, useState } from "react";
 import Database from "../database/Database";
 import TLanguage from "../database/TLanguage";
+import { useNavigate } from "react-router-dom";
+import { AuthenticatedComponentDefaultProps } from "./base/Authenticator";
 
-interface Props {
-  storySelected: (story: TStory) => void;
-  language: TLanguage;
-}
+const StoriesSearch = ({ user_settings }: AuthenticatedComponentDefaultProps) => {
+  const language = user_settings?.language as TLanguage || 'Romanian';
 
-const StoriesSearch = ({ storySelected, language }: Props) => {
+  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [stories, setStories] = useState<TStory[]>([]);
   const [search, setSearch] = useState<string>('');
@@ -18,9 +18,17 @@ const StoriesSearch = ({ storySelected, language }: Props) => {
   const lastSearch = useRef<string>('');
 
   useEffect(() => {
+    if (window.sessionStorage.getItem('stories')) {
+      const _stories = JSON.parse(window.sessionStorage.getItem('stories') as string);
+      setStories(_stories);
+      setFilteredStories(_stories);
+      return;
+    }
+
     Database.GetAllStories(language).then((stories) => {
       setStories(stories);
       setFilteredStories(stories);
+      window.sessionStorage.setItem('stories', JSON.stringify(stories));
     });
   }, [language]);
 
@@ -49,7 +57,7 @@ const StoriesSearch = ({ storySelected, language }: Props) => {
   };
 
   return (
-    <>
+    <div style={{ padding: '1rem', width: 'calc(100% - 2rem', height: 'calc(100% - 4rem)' }}>
       <Stack direction="column" spacing={5} sx={{ height: '100%', display: 'flex', alignItems: 'center' }}>
         <div>
           <div>
@@ -75,7 +83,7 @@ const StoriesSearch = ({ storySelected, language }: Props) => {
             >Reset Filter</Button>
           </div>
         </div>
-        <div className="stories-container">
+        <Paper elevation={10} className="stories-container">
           <Stack direction="column" spacing={2}>
             {
               filteredStories.length === 0
@@ -85,7 +93,7 @@ const StoriesSearch = ({ storySelected, language }: Props) => {
                   elevation={3}
                   className="story-card"
                   key={story.id}
-                  onClick={() => storySelected(story)}
+                  onClick={() => navigate(`/reading/${story.id}`)}
                 >
                   <div className="story-title-and-word-count">
                     <span>{story.title}</span>
@@ -95,12 +103,12 @@ const StoriesSearch = ({ storySelected, language }: Props) => {
               ))
             }
           </Stack>
-        </div>
+        </Paper>
       </Stack>
       <div className='results-count-display'>
         <span>Showing {filteredStories.length}/{stories.length} results</span>
       </div>
-    </>
+    </div>
   );
 }
  

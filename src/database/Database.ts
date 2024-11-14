@@ -256,4 +256,23 @@ export default class Database {
       throw error;
     }
   }
+
+  public static async GetStoryByID(story_id: StoryID): Promise<TStory> {
+    const { data, error } = await supabase
+      .from('Stories')
+      .select('*')
+      .eq('id', story_id);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    return {
+      id: data[0].id as StoryID,
+      language: data[0].language as TLanguage,
+      title: data[0].title,
+      body: data[0].body
+    }
+  }
 }
