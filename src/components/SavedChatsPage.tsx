@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { CSSProperties, useEffect, useState } from "react";
 import { AuthenticatedComponentDefaultProps } from "./base/Authenticator";
 import SavedChat from "./SavedChat";
 import supabase from "../database/supabase-config";
@@ -30,6 +30,27 @@ const SavedChatsPage = ({ user, user_settings }: AuthenticatedComponentDefaultPr
     });
   }, [user, navigate]);
   
+  let savedChatsContainerStyles: CSSProperties = {
+    display: 'grid',
+    gridGap: '3rem',
+    padding: '1rem',
+    overflowX: 'hidden',
+    paddingBottom: '3.5rem',
+  };
+
+  if (window.innerWidth >= 769) {
+    savedChatsContainerStyles = {
+      ...savedChatsContainerStyles,
+      gridTemplateColumns: 'repeat(3, 1fr)'
+    }; 
+  } else {
+    savedChatsContainerStyles = {
+      ...savedChatsContainerStyles,
+      gridTemplateColumns: 'repeat(1, 1fr)',
+      width: '80%'
+    }; 
+  }
+  
   return (
     <div className="saved-chats" style={{
       width: '100%',
@@ -51,14 +72,7 @@ const SavedChatsPage = ({ user, user_settings }: AuthenticatedComponentDefaultPr
         height: '100vh',
         marginTop: '2.5rem',
       }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)', // 3 equal-width columns
-          gridGap: '3rem',
-          padding: '1rem',
-          overflowX: 'hidden',
-          paddingBottom: '3.5rem',
-        }} className="hide-scrollbar-y">
+        <div style={savedChatsContainerStyles} className="hide-scrollbar-y">
           {
             savedChats.map((chat, index) => {
               return (

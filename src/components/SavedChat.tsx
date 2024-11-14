@@ -27,7 +27,7 @@ const SavedChat = ({ conversation_id, last_bot_msg, last_user_msg, avatar_url, a
   return (
     <Paper elevation={3} sx={{
       padding: '1rem',
-      width: '25vw',
+      width: 'calc(100% - 2rem)',
     }}>
       <Stack direction='column' sx={{ display: 'flex', justifyContent: 'center', height: '100%' }}>
         <UserMessage content={last_user_msg} language={language} avatar_url={avatar_url} />
