@@ -38,7 +38,7 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
       const showResult = () => {
         showInfoModal(
           `${language} Grammar & Spelling Check`,
-          `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\nC: ${corrected_message}\n\nO:${content}\n\nNote that the bot sometimes grades incorrectly.`,
+          `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\nC: ${corrected_message}\n\nO: ${content}\n\nNote that the bot sometimes grades incorrectly.`,
         );
       };
 
