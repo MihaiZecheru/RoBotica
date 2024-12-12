@@ -1,5 +1,6 @@
 const express = require('express');
 const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
+const { SpeechClient } = require('@google-cloud/speech');
 const path = require('path');
 const cors = require('cors');
 
@@ -22,6 +23,8 @@ const language_codes = {
 /**
  * @param {string} text body.text: the text in `language` to pronounce in the audio
  * @param {string} language body.language: the language of the text
+ * @param {boolean} ssml body.ssml: if true, the text is SSML. Defaults to false
+ * @returns {Buffer} audioContent: the audio data of the spoken
  */
 app.post('/text-to-speech', async (req, res) => {
   const text = req.body.text;
@@ -53,6 +56,52 @@ app.post('/text-to-speech', async (req, res) => {
     const [response] = await client.synthesizeSpeech(request);
     res.setHeader('Content-Type', 'audio/mpeg');
     res.send(response.audioContent);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Failed to process request - internal server error');
+  }
+});
+
+/**
+ * @param {string} audioContent body.audioContent: the audio data to transcribe
+ * @param {string} language body.language: the language of the audio
+ * @returns {string} transcription: the transcribed text
+ */
+app.post('/speech-to-text', async (req, res) => {
+  const audioContent = req.body.audioContent;
+  const language = req.body.language;
+
+  if (!audioContent) {
+    return res.status(400).send('Missing required field in body: audioContent');
+  }
+
+  if (!language) {
+    return res.status(400).send('Missing required field in body: language');
+  }
+
+  if (!Object.keys(language_codes).includes(language)) {
+    return res.status(500).send("Invalid language. Case sensitive. Must be one of: " + Object.keys(language_codes).join(", "));
+  }
+
+  const client = new SpeechClient();
+
+  const request = {
+    audio: {
+      content: audioContent,
+    },
+    config: {
+      encoding: 'MP3',
+      sampleRateHertz: 16000,
+      languageCode: language_codes[language],
+    },
+  };
+
+  try {
+    const [response] = await client.recognize(request);
+    const transcription = response.results
+      .map(result => result.alternatives[0].transcript)
+      .join('\n');
+    res.send({ transcription });
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Failed to process request - internal server error');
