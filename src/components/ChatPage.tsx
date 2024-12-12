@@ -119,7 +119,7 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
 
   return (
     <div className="chat-page" onKeyDown={onKeyDown} tabIndex={0}>
-      <Paper elevation={3} className="chat-window" sx={{ borderRadius: '1rem', position: 'relative' }} >
+      <Paper elevation={3} className="chat-window" sx={{ borderRadius: (window.innerWidth >= 769) ? '1rem' : '0', position: 'relative' }} >
         <div className='chat-input-large-container'>
           <div className='chat-messages-container' ref={chatMessageContainer}>
             {
