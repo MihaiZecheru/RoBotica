@@ -5,6 +5,7 @@ import useInfoModal from "./base/useInfoModal";
 import Bot from "../functions/Bot";
 import { useState } from "react";
 import Loading from "./Loading";
+import TextToSpeech from "./TextToSpeech";
 
 interface Props {
   content: string;
@@ -28,7 +29,7 @@ const BotMessage = ({ content, language }: Props) => {
     const translation = await Bot.GenerateMessageTranslation(content, language);
 
     const showResult = () => {
-      showInfoModal(`${language} Message Translation`, `${content}\n\n${translation}`);
+      showInfoModal(`${language} Message Translation`, `${content}\n\n${translation}`, <TextToSpeech text={content} language={language} />);
       setAvatarCanBeClicked(true);
     };
 

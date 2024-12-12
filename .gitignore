@@ -24,3 +24,5 @@ yarn-error.log*
 
 .env
 RoBotica.code-workspace
+text-to-speech-api/google-service-credentials.json
+text-to-speech-api/node_modules

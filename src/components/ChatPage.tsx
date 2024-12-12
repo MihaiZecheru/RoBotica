@@ -12,6 +12,7 @@ import { ConversationID } from '../database/ID';
 import BotTyping from './BotTyping';
 import Bot from '../functions/Bot';
 import { useNavigate } from 'react-router-dom';
+import isMobile from '../functions/isMobile';
 
 const MINIMUM_BOT_TYPING_TIME: number = 2000; // ms
 
@@ -119,7 +120,7 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
 
   return (
     <div className="chat-page" onKeyDown={onKeyDown} tabIndex={0}>
-      <Paper elevation={3} className="chat-window" sx={{ borderRadius: (window.innerWidth >= 769) ? '1rem' : '0', position: 'relative' }} >
+      <Paper elevation={3} className="chat-window" sx={{ borderRadius: isMobile() ? '0' : '1rem', position: 'relative' }} >
         <div className='chat-input-large-container'>
           <div className='chat-messages-container' ref={chatMessageContainer}>
             {
@@ -175,13 +176,13 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
 
       {
         /* only show button if user is not on mobile */
-        window.innerWidth >= 769 &&
+        !isMobile() &&
         <Button type='button' onClick={createNewConversation} sx={{ position: 'fixed', bottom: '1rem', left: '1rem' }}>New Conversation</Button>
       }
 
       {
         /* only show button if user is not on mobile */
-        window.innerWidth >= 769 &&
+        !isMobile() &&
         <Button type='button' onClick={() => {
           sessionStorage.clear();
           navigate('/navily');

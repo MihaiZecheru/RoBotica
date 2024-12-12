@@ -1,14 +1,15 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, ReactElement, useContext, useState } from 'react';
 import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button } from '@mui/material';
 
 export interface InfoModalState {
   open: boolean;
   title: string;
   message: string;
+  translate_button?: ReactElement;
 }
 
 interface ModalContextType {
-  showInfoModal: (title: string, message: string) => void;
+  showInfoModal: (title: string, message: string, translate_button?: ReactElement) => void
 }
 
 // Create a context for the modal
@@ -20,11 +21,19 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   /**
    * Display the modal to the screen with the given title and message.
    */
-  const showInfoModal = (title: string, message: string) => {
-    setModalState({ open: true, title, message });
+  const showInfoModal = (title: string, message: string, translate_button?: ReactElement) => {
+    setModalState({ open: true, title, message, translate_button });
   };
 
   const handleClose = () => {
+    // Pause the audio on close if there was a translate button on the modal
+    if (modalState?.translate_button !== undefined) {
+      const audio = document.querySelector('audio');
+      console.log(audio);
+      audio?.pause();
+      audio?.remove();
+    }
+    
     setModalState(null);
   };
 
@@ -67,7 +76,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ state, onClose }) => {
         },
       }}
     >
-      <DialogTitle id="info-dialog-title">{state?.title || ''}</DialogTitle>
+      <DialogTitle id="info-dialog-title"sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>{state?.title || ''} {state?.translate_button && state.translate_button}</DialogTitle>
       <DialogContent>
         <DialogContentText id="info-dialog-description" sx={{ fontFamily: 'Comfortaa', whiteSpace: 'pre-line', lineHeight: '1' }}>
           {state?.message || ''}

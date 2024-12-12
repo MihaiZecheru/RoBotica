@@ -5,6 +5,7 @@ import useInfoModal from "./base/useInfoModal";
 import Bot from "../functions/Bot";
 import { useState } from "react";
 import Loading from "./Loading";
+import TextToSpeech from "./TextToSpeech";
 
 interface Props {
   content: string;
@@ -30,7 +31,11 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
     if (mistake_count === 0) {
       showInfoModal(
         `${language} Grammar & Spelling Check`,
-        `Your message contains no mistakes. Great job!\nCorrected vs original:\n\nC: ${corrected_message}\n\nO: ${content}\n\nNote that the bot sometimes grades incorrectly.`,
+        `Your message contains no mistakes. Great job!\nCorrected vs original:\n\nC: ${corrected_message}\n\nO: ${content}\n\nDouble check results; bot can sometimes be incorrect.`,
+        <TextToSpeech
+          text={corrected_message}
+          language={language}
+        />
       );
     } else {
       const s = mistake_count > 1 ? 's' : '';
@@ -38,7 +43,11 @@ const UserMessage = ({ content, language, avatar_url }: Props) => {
       const showResult = () => {
         showInfoModal(
           `${language} Grammar & Spelling Check`,
-          `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\nC: ${corrected_message}\n\nO: ${content}\n\nNote that the bot sometimes grades incorrectly.`,
+          `Your message contains ${mistake_count} mistake${s}. Corrected vs original:\n\nC: ${corrected_message}\n\nO: ${content}\n\nDouble check results; bot can sometimes be incorrect.`,
+          <TextToSpeech
+            text={corrected_message}
+            language={language}
+          />
         );
       };
 

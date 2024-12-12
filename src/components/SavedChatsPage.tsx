@@ -6,6 +6,7 @@ import { ConversationID, UserID } from "../database/ID";
 import { Button, Paper } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import Database from "../database/Database";
+import isMobile from "../functions/isMobile";
 
 type ConversationPreview = {
   id: ConversationID;
@@ -38,16 +39,16 @@ const SavedChatsPage = ({ user, user_settings }: AuthenticatedComponentDefaultPr
     paddingBottom: '3.5rem',
   };
 
-  if (window.innerWidth >= 769) {
-    savedChatsContainerStyles = {
-      ...savedChatsContainerStyles,
-      gridTemplateColumns: 'repeat(3, 1fr)'
-    }; 
-  } else {
+  if (isMobile()) {
     savedChatsContainerStyles = {
       ...savedChatsContainerStyles,
       gridTemplateColumns: 'repeat(1, 1fr)',
       width: '80%'
+    };
+  } else {
+    savedChatsContainerStyles = {
+      ...savedChatsContainerStyles,
+      gridTemplateColumns: 'repeat(3, 1fr)'
     }; 
   }
   
