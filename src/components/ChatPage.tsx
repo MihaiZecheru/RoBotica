@@ -13,6 +13,7 @@ import BotTyping from './BotTyping';
 import Bot from '../functions/Bot';
 import { useNavigate } from 'react-router-dom';
 import isMobile from '../functions/isMobile';
+import SpeechToTextButton from './SpeechToTextButton';
 
 const MINIMUM_BOT_TYPING_TIME: number = 2000; // ms
 
@@ -169,6 +170,9 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
               } }
               inputProps={{ maxLength: 150, sx: { '::placeholder': { userSelect: 'none' } }}}
             />
+            <SpeechToTextButton language={user_settings?.language} onTranscriptionComplete={(transcribed_text: string) => {
+              chatInputRef.current!.value = transcribed_text;
+            }}/>
             <SendButton onClick={send_message} />
           </div>
         </div>

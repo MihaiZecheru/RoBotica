@@ -22,3 +22,28 @@ export default async function TextToSpeechAPI(text: string, language: TLanguage,
 
   return await response.blob();
 }
+
+const convertBlobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+export async function SpeechToTextAPI(audio: Blob, language: TLanguage): Promise<string> {
+  const response = await fetch("http://localhost:4000/speech-to-text", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ audio_b64: await convertBlobToBase64(audio), language }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return await response.text();
+}

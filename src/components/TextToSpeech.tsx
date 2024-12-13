@@ -1,7 +1,6 @@
-import { IconButton } from "@mui/material";
+import { IconButton, Tooltip } from "@mui/material";
 import CampaignIcon from '@mui/icons-material/Campaign';
 import TLanguage from "../database/TLanguage";
-import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import { useState } from "react";
 import TextToSpeechAPI from "../functions/TextToSpeechAPI";
 
@@ -27,13 +26,15 @@ const TextToSpeech = ({ text, language, ssml }: Props) => {
 
     const blob: Blob = await TextToSpeechAPI(text, language, ssml || false);
     const _audio = new Audio(URL.createObjectURL(blob));
+    
     if (document.querySelector("audio")) document.querySelector("audio")?.remove();
     document.body.appendChild(_audio);
+    
     setIsLoading(false);
     setAudio(_audio);
     _audio.play();
-    _audio.onended = () => { document.querySelector("audio")?.remove(); setIsPlaying(false); }
     setIsPlaying(true);
+    _audio.onended = () => { document.querySelector("audio")?.remove(); setIsPlaying(false); }
   };
 
   const stopAudio = () => {
@@ -45,11 +46,13 @@ const TextToSpeech = ({ text, language, ssml }: Props) => {
   };
 
   return (
-    <IconButton aria-label="read text" onClick={isPlaying ? stopAudio : getSpeech}>
-      {
-        isPlaying ? <VolumeOffIcon /> : <CampaignIcon />
-      }
-    </IconButton>
+    <Tooltip title={isPlaying ? "Stop listening" : "Listen"} placement="top">
+      <IconButton aria-label="read text" onClick={isPlaying ? stopAudio : getSpeech}>
+        {
+          <CampaignIcon color={isPlaying ? "primary" : "inherit"} />
+        }
+      </IconButton>
+    </Tooltip>
   );
 }
  

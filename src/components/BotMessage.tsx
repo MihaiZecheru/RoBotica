@@ -60,6 +60,7 @@ const BotMessage = ({ content, language }: Props) => {
               )
             }
           </div>
+          <TextToSpeech text={content} language={language} />
         </div>
       </Paper>
       { !avatarCanBeClicked && <Loading />}

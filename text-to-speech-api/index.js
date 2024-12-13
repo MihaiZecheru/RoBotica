@@ -8,8 +8,8 @@ const cors = require('cors');
 process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(__dirname, 'google-service-credentials.json');
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json({ limit: '50mb' })); // Larger payload limit due to audio data
 
 const language_codes = {
   "Spanish": "es-US",
@@ -24,7 +24,7 @@ const language_codes = {
  * @param {string} text body.text: the text in `language` to pronounce in the audio
  * @param {string} language body.language: the language of the text
  * @param {boolean} ssml body.ssml: if true, the text is SSML. Defaults to false
- * @returns {Buffer} audioContent: the audio data of the spoken
+ * @returns {Buffer} audio: the audio data of the spoken
  */
 app.post('/text-to-speech', async (req, res) => {
   const text = req.body.text;
@@ -55,7 +55,7 @@ app.post('/text-to-speech', async (req, res) => {
   try {
     const [response] = await client.synthesizeSpeech(request);
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.send(response.audioContent);
+    res.send(response.audioContent); 
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Failed to process request - internal server error');
@@ -63,16 +63,16 @@ app.post('/text-to-speech', async (req, res) => {
 });
 
 /**
- * @param {string} audioContent body.audioContent: the audio data to transcribe
+ * @param {string} audio body.audio: the audio data to transcribe as a base64 string
  * @param {string} language body.language: the language of the audio
  * @returns {string} transcription: the transcribed text
  */
 app.post('/speech-to-text', async (req, res) => {
-  const audioContent = req.body.audioContent;
+  let audio_b64 = req.body.audio_b64;
   const language = req.body.language;
 
-  if (!audioContent) {
-    return res.status(400).send('Missing required field in body: audioContent');
+  if (!audio_b64) {
+    return res.status(400).send('Missing required field in body: audio_b64');
   }
 
   if (!language) {
@@ -85,9 +85,13 @@ app.post('/speech-to-text', async (req, res) => {
 
   const client = new SpeechClient();
 
+  if (audio_b64.includes("data:audio/wav;base64,")) {
+    audio_b64 = audio_b64.substring("data:audio/wav;base64,".length);
+  }
+
   const request = {
     audio: {
-      content: audioContent,
+      content: audio_b64,
     },
     config: {
       encoding: 'MP3',
@@ -101,7 +105,7 @@ app.post('/speech-to-text', async (req, res) => {
     const transcription = response.results
       .map(result => result.alternatives[0].transcript)
       .join('\n');
-    res.send({ transcription });
+    res.send(transcription);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Failed to process request - internal server error');
