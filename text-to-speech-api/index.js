@@ -3,6 +3,9 @@ const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
 const { SpeechClient } = require('@google-cloud/speech');
 const path = require('path');
 const cors = require('cors');
+const cheerio = require('cheerio');
+const dotenv = require('dotenv');
+dotenv.config();
 
 // Set the environment variable for the Google Cloud credentials
 process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(__dirname, 'google-service-credentials.json');
@@ -110,6 +113,32 @@ app.post('/speech-to-text', async (req, res) => {
     console.error('Error:', error);
     res.status(500).send('Failed to process request - internal server error');
   }
+});
+
+app.get('/genius-search', async (req, res) => {
+  const q = req.query.q;
+
+  fetch(`https://api.genius.com/search?q=${q}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.GENIUS_API_KEY}`
+    }
+  }).then((response) => response.json()).then((data) => {
+    res.send(data);
+  });
+});
+
+app.post('/scrape-genius-lyrics', async (req, res) => {
+  const genius_lyrics_url = req.body.url;
+
+  if (!genius_lyrics_url) {
+    return res.status(400).send('Missing required field in body: url');
+  }
+
+  const html = await fetch(genius_lyrics_url).then(res => res.text());
+  const $ = cheerio.load(html);
+  const lyrics_div = $('div[data-lyrics-container]').html();
+  const lyrics = lyrics_div.replace(/<br>/g, '\n').replace(/<.*?>/g, '');
+  res.send(lyrics.trim());
 });
 
 const port = 4000;

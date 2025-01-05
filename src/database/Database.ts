@@ -1,10 +1,11 @@
-import { ConversationID, StoryID, UserID } from "./ID";
+import { ConversationID, SongID, StoryID, UserID } from "./ID";
 import supabase from "./supabase-config";
 import TTranslationAndExamples from "./TTranslationAndExamples";
 import TLanguage from "./TLanguage";
 import TMessage from "./TMessage";
 import TStory from "./TStory";
 import { TUserSettings } from "./GetUser";
+import TSong from "./TSong";
 
 export default class Database {
 
@@ -275,6 +276,115 @@ export default class Database {
       language: data[0].language as TLanguage,
       title: data[0].title,
       body: data[0].body
+    }
+  }
+
+  /**
+   * Get all songs for the given language
+   */
+  public static async GetAllSongs(language: TLanguage): Promise<TSong[]> {
+    const { data, error } = await supabase
+      .from('Songs')
+      .select('*')
+      .eq('language', language);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    return data as TSong[];
+  }
+
+  public static async AddSong(
+    language: TLanguage, title: string, artist: string, year: number | null,
+    lyrics: string, thumbnail_url: string, image_url: string,
+    youtube_video_id: string): Promise<void> {
+    // Check if song exists first
+    const { data, error } = await supabase
+      .from('Songs')
+      .select('id')
+      .eq('title', title)
+      .eq('artist', artist);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    if (data.length > 0) {
+      console.error(`Song "${title}" by "${artist}" already exists in the database`);
+      alert(`Song "${title}" by "${artist}" already exists in the database`);
+      return;
+    }
+    
+    const { error: e1 } = await supabase
+      .from('Songs')
+      .insert([{
+        language: language,
+        title: title,
+        artist: artist,
+        year: year,
+        lyrics: lyrics,
+        thumbnail_url: thumbnail_url,
+        image_url: image_url,
+        youtube_video_id: youtube_video_id
+      }]);
+
+    if (e1) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  public static async GetSong(id: SongID): Promise<TSong> {
+    const { data, error } = await supabase
+      .from('Songs')
+      .select('*')
+      .eq('id', id);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    return data[0] as TSong;
+  }
+
+  public static async GetLyricTranslationAndMeaning(lyric: string, language: TLanguage, song_id: SongID): Promise<{ translation: string, meaning: string } | null> {
+    const { data, error } = await supabase
+      .from('LyricTranslationAndMeaning')
+      .select('translation,meaning')
+      .eq('lyric', lyric)
+      .eq('language', language)
+      .eq('song_id', song_id);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    if (data.length === 0) return null;
+    return {
+      translation: data[0].translation,
+      meaning: data[0].meaning
+    };
+  }
+
+  public static async AddLyricTranslation(lyric: string, language: TLanguage, song_id: SongID, translation: string, meaning: string): Promise<void> {
+    const { error } = await supabase
+      .from('LyricTranslationAndMeaning')
+      .insert([{
+        lyric,
+        language,
+        song_id,
+        translation: translation,
+        meaning: meaning
+      }]);
+
+    if (error) {
+      console.error(error);
+      throw error;
     }
   }
 }

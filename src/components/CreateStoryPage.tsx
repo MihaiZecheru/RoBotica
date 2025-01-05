@@ -98,6 +98,7 @@ const CreateStoryPage = ({ user }: AuthenticatedComponentDefaultProps) => {
             starting_value='All'
           />
           <Button type='button' onClick={() => navigate('/navily')}>Navily</Button>
+          <Button type='button' onClick={() => navigate('/create-song')}>Create Song Instead</Button>
         </div>
         <TextField placeholder="Body" variant='outlined'
           fullWidth

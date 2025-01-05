@@ -10,16 +10,6 @@ import Database from '../database/Database';
 import TStory from '../database/TStory';
 import { StoryID } from '../database/ID';
 
-interface Props {
-  language: TLanguage;
-  title: string;
-  body: string;
-  /**
-   * Goes back to the story-search page.
-   */
-  backToSearch: () => void;
-}
-
 function getStartOfSentence(paragraph: string, index: number): number {
   const words = paragraph.split(' ');
   

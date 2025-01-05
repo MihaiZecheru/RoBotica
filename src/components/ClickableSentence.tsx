@@ -10,6 +10,7 @@ import { StoryID } from "../database/ID";
 import TextToSpeech from "./TextToSpeech";
 import TextToSpeechAPI from "../functions/TextToSpeechAPI";
 import isMobile from "../functions/isMobile";
+import Loading from "./Loading";
 
 interface Props {
   language: TLanguage;
@@ -64,10 +65,11 @@ const ClickableSentence = ({ language, sentence, story_id }: Props) => {
   
   return (
     <span>
-      <Tooltip title={isMobile() ? "Translate sentence" : "Translate sentence. +click to pronounce"} placement="right-end">
+      <Tooltip title={isMobile() ? "Translate sentence" : "Translate sentence"} placement="right-end">
         <TranslateIcon onClick={handleClick} className="translate-sentence-icon" />
       </Tooltip>
       {'. '}
+      { !canBeClicked && <Loading /> }
     </span>
   );
 }

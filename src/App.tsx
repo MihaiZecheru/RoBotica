@@ -11,6 +11,9 @@ import SavedChatsPage from './components/SavedChatsPage';
 import StoriesSearch from './components/StoriesSearch';
 import StoryView from './components/StoryView';
 import CreateStoryPage from './components/CreateStoryPage';
+import MusicSearch from './components/MusicSearch';
+import SongView from './components/SongView';
+import CreateSongPage from './components/CreateSongPage';
 
 function App() {
   return (
@@ -28,8 +31,11 @@ function App() {
           <Route path="/chat/saved" element={ <Authenticator component={ <SavedChatsPage /> } /> } />
           <Route path="/account" element={ <Authenticator component={ <AccountPage /> } /> } />
           <Route path="/reading" element={ <Authenticator component={ <StoriesSearch /> } /> } />
+          <Route path="/music" element={ <Authenticator component={ <MusicSearch /> } /> } />
           <Route path="/reading/:id" element={ <Authenticator component={ <StoryView /> } /> } />
+          <Route path="/music/:id" element={ <Authenticator component={ <SongView /> } /> } />
           <Route path="/create-story" element={ <Authenticator component={ <CreateStoryPage /> } /> } />
+          <Route path="/create-song" element={ <Authenticator component={ <CreateSongPage /> } /> } />
         </Routes>
       </Router>
     </ModalProvider>

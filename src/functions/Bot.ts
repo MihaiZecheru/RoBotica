@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import TLanguage from "../database/TLanguage";
 import TTranslationAndExamples from "../database/TTranslationAndExamples";
 import TStory from "../database/TStory";
+import TSong from "../database/TSong";
 
 const openAI = new OpenAI({ apiKey: process.env.REACT_APP_OPENAI_API_KEY!, dangerouslyAllowBrowser: true, organization: process.env.REACT_APP_OPENAI_ORG_ID, project: process.env.REACT_APP_OPENAI_PROJECT_ID });
 const HISTORY_SIZE = 15;
@@ -231,5 +232,35 @@ export default class Bot {
     const match = message.match(new RegExp(/(Title|Titlu|Título|Titulo|Titel|Titre|Titolo|):(.*)\s+(Story|Poveste|Historia|Geschichte|Histoire|Storia|História):\s+(.*)/, 's'));
     if (!match) throw new Error('Could not interpret response from AI. Try again. Here was the message: ' + message);
     return { title: match[2].trim(), body: match[4].trim(), language };
+  }
+
+  /**
+   * Translate a lyric using AI and generate a meaning for the lyric.
+   * @param lyric The lyric to translate into `language`. One line from the given `song`.
+   * @returns The translation and meaning of the lyric.
+   */
+  public static async GenerateLyricTranslationAndMeaning(lyric: string, language: TLanguage, song: TSong): Promise<{ translation: string, meaning: string }> {
+    const translation_response = await openAI.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        "role": "system",
+        "content": `Translate the lyric "${lyric}" from the song ${song.title} by ${song.artist} from ${language} to English.
+        ${language === 'Spanish' ? 'Use mexican spanish' : ''}
+        Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
+        Give just the translation, nothing else. Do not wrap in quotes or anything.`
+      }]
+    });
+
+    const meaning_response = await openAI.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        "role": "system",
+        "content": `Generate a short meaning of the lyric "${lyric}" from the song ${song.title} by ${song.artist}, which is in ${language}.
+        The meaning that you generate must be in English.
+        Give just the breif meaning/interpretation of the lyric, nothing else. Do not wrap in quotes or anything.`
+      }]
+    });
+
+    return { translation: translation_response.choices[0].message.content!, meaning: meaning_response.choices[0].message.content! };
   }
 }
