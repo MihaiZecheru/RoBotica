@@ -8,7 +8,7 @@ import TLanguage from "../database/TLanguage";
  */
 export default async function TextToSpeechAPI(text: string, language: TLanguage, ssml: boolean): Promise<Blob> {
   // TODO: check that the URL works after setting up in production
-  const response = await fetch("http://localhost:4000/text-to-speech", {
+  const response = await fetch("https://robotica.mzecheru.com/text-to-speech", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -33,7 +33,7 @@ const convertBlobToBase64 = (blob: Blob): Promise<string> => {
 };
 
 export async function SpeechToTextAPI(audio: Blob, language: TLanguage): Promise<string> {
-  const response = await fetch("http://localhost:4000/speech-to-text", {
+  const response = await fetch("https://robotica.mzecheru.com/speech-to-text", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
