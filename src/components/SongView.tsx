@@ -54,7 +54,7 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
             className="hide-scrollbar-y">
             <p style={{ height: '100%' }}>
               {
-                song.lyrics.split("\n").map((lyric, index) => (
+                song.lyrics.trim().split("\n").map((lyric, index) => (
                   <div>
                     {
                       lyric.split(" ").map((word, index) => (
@@ -72,6 +72,7 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
                   </div>
                 ))
               }
+              <br />
             </p>
           </Paper>
         </div>
