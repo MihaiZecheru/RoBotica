@@ -2,22 +2,18 @@ import { useEffect, useState } from "react";
 import { AuthenticatedComponentDefaultProps } from "./base/Authenticator";
 import { useNavigate } from "react-router-dom";
 import TSong from "../database/TSong";
-import { Button, Input, Paper } from "@mui/material";
+import { Button, Input, Paper, TextField } from "@mui/material";
 import TLanguage, { LANGUAGES } from "../database/TLanguage";
 import Dropdown from "./Dropdown";
 import Database from "../database/Database";
 import Loading from "./Loading";
-
-function get_video_id_from_url(url: string): string {
-  // Get just the video id from https://youtube.com/watch?v=VIDEO_ID
-  return url.split('v=')[1];
-}
 
 const CreateSongPage = ({ user }: AuthenticatedComponentDefaultProps) => {
   const [searchResults, setSearchResults] = useState<TSong[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState<TLanguage | 'NULL'>('NULL');
   const [youtube_video_id, set_youtube_video_id] = useState('');
+  const [lyrics, set_lyrics] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -44,26 +40,21 @@ const CreateSongPage = ({ user }: AuthenticatedComponentDefaultProps) => {
       return;
     }
 
+    if (lyrics.length === 0) {
+      alert('Please enter lyrics');
+      setLoading(false);
+      return;
+    }
+
+    await Database.AddSong(
+      song.language, song.title, song.artist, song.year,
+      lyrics, song.thumbnail_url, song.image_url, youtube_video_id
+    );
+
     setSearchQuery('');
     set_youtube_video_id('');
-    
-    // song.lyrics is the URL to the lyrics page here but is usually the scraped lyrics themselves
-    const lyrics: string = await fetch(`http://localhost:4000/scrape-genius-lyrics`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: song.lyrics })
-    }).then(res => res.text());
-    
-    await Database.AddSong(
-      song.language,
-      song.title,
-      song.artist,
-      song.year,
-      lyrics,
-      song.thumbnail_url,
-      song.image_url,
-      get_video_id_from_url(youtube_video_id)
-    );
+    set_lyrics('');
+    setSearchResults([]);
     setLoading(false);
   };
 
@@ -76,7 +67,11 @@ const CreateSongPage = ({ user }: AuthenticatedComponentDefaultProps) => {
 
     setLoading(true);
 
-    fetch(`http://localhost:4000/genius-search?q=${encodeURIComponent(searchQuery)}`)
+    fetch(`https://robotica.mzecheru.com/genius-search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: searchQuery })
+    })
       .then(res => res.json())
       .then(data => {
         const songs: TSong[] = data.response.hits.map((hit: any) => ({
@@ -111,7 +106,8 @@ const CreateSongPage = ({ user }: AuthenticatedComponentDefaultProps) => {
       flexDirection: 'column', 
       alignItems: 'center', 
       justifyContent: 'center', 
-      height: '100vh' 
+      height: '100vh',
+      overflowY: 'auto'
     }}>
       <div style={{
         display: 'flex', 
@@ -119,6 +115,7 @@ const CreateSongPage = ({ user }: AuthenticatedComponentDefaultProps) => {
         alignItems: 'center', 
         justifyContent: 'center',
         width: '100%', // Added width to fill the parent container
+        marginTop: '15vh'
       }}>
         <h1>Create a Song</h1>
         <div style={{
@@ -151,6 +148,15 @@ const CreateSongPage = ({ user }: AuthenticatedComponentDefaultProps) => {
               placeholder="YouTube Video ID"
               value={youtube_video_id}
               onChange={(e) => set_youtube_video_id(e.target.value.trim())}
+              onKeyDown={(e) => { if (e.key === 'Enter') search(); }}
+              style={{ width: '150px', marginBottom: '1rem' }}
+            />
+            <TextField
+              type="text"
+              multiline
+              placeholder="Genius Lyrics"
+              value={lyrics}
+              onChange={(e) => set_lyrics(e.target.value.trim())}
               onKeyDown={(e) => { if (e.key === 'Enter') search(); }}
               style={{ width: '150px', marginBottom: '1rem' }}
             />

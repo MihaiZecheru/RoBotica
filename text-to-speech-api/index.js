@@ -127,20 +127,6 @@ app.get('/genius-search', async (req, res) => {
   });
 });
 
-app.post('/scrape-genius-lyrics', async (req, res) => {
-  const genius_lyrics_url = req.body.url;
-
-  if (!genius_lyrics_url) {
-    return res.status(400).send('Missing required field in body: url');
-  }
-
-  const html = await fetch(genius_lyrics_url).then(res => res.text());
-  const $ = cheerio.load(html);
-  const lyrics_div = $('div[data-lyrics-container]').html();
-  const lyrics = lyrics_div.replace(/<br>/g, '\n').replace(/<.*?>/g, '');
-  res.send(lyrics.trim());
-});
-
 const port = 4000;
 app.listen(port, () => {
   console.log(`Server listening @ http://localhost:${port}`);
