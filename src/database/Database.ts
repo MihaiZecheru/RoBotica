@@ -317,22 +317,13 @@ export default class Database {
       alert(`Song "${title}" by "${artist}" already exists in the database`);
       return;
     }
-    
+
     const { error: e1 } = await supabase
       .from('Songs')
-      .insert([{
-        language: language,
-        title: title,
-        artist: artist,
-        year: year,
-        lyrics: lyrics,
-        thumbnail_url: thumbnail_url,
-        image_url: image_url,
-        youtube_video_id: youtube_video_id
-      }]);
+      .insert([{ language, title, artist, year, lyrics, thumbnail_url, image_url, youtube_video_id }]);
 
     if (e1) {
-      console.error(error);
+      console.error(e1);
       throw error;
     }
   }
