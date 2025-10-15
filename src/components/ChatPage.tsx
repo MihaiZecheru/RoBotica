@@ -14,6 +14,7 @@ import Bot from '../functions/Bot';
 import { useNavigate } from 'react-router-dom';
 import isMobile from '../functions/isMobile';
 import SpeechToTextButton from './SpeechToTextButton';
+import WordSearchModal from './WordSearchModal';
 
 const MINIMUM_BOT_TYPING_TIME: number = 2000; // ms
 
@@ -26,6 +27,7 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
   const [messages, setMessages] = useState<Array<{ content: string, is_bot: boolean }>>([starting_message]);
   const [botIstyping, setBotIsTyping] = useState<boolean>(false);
   const [inputDisabled, setInputDisabled] = useState<boolean>(false);
+  const [wordSearchModalIsOpen, setWordSearchModalIsOpen] = useState<boolean>(false);
 
   // Used for when a message is sent during a new conversation
   // The user will not have a conversation ID until the first message is sent,
@@ -116,11 +118,15 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
     if (e.ctrlKey && (e.key === '/' || e.key === 'k')) {
       e.preventDefault();
       chatInputRef.current?.focus();
+    } else if (e.ctrlKey && e.key === ' ') {
+      e.preventDefault();
+      setWordSearchModalIsOpen(!wordSearchModalIsOpen);
     }
   };
 
   return (
     <div className="chat-page" onKeyDown={onKeyDown} tabIndex={0}>
+      { user_settings?.language && <WordSearchModal language={user_settings?.language} isOpen={wordSearchModalIsOpen} setIsOpen={setWordSearchModalIsOpen} />}
       <Paper elevation={3} className="chat-window" sx={{ borderRadius: isMobile() ? '0' : '1rem', position: 'relative' }} >
         <div className='chat-input-large-container'>
           <div className='chat-messages-container' ref={chatMessageContainer}>
@@ -181,7 +187,13 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
       {
         /* only show button if user is not on mobile */
         !isMobile() &&
-        <Button type='button' onClick={createNewConversation} sx={{ position: 'fixed', bottom: '1rem', left: '1rem' }}>New Conversation</Button>
+        <div style={{ position: 'fixed', bottom: '1rem', left: '1rem' }}>
+          <Button type='button' onClick={createNewConversation}>New Conversation</Button>
+          <span style={{ color: 'var(--primary-blue)' }}>●</span>
+          <Tooltip title={`Quickly look up a word in ${user_settings?.language} (Ctrl+Space)`}>
+            <Button type='button' onClick={() => setWordSearchModalIsOpen(true)}>Word Lookup</Button>
+          </Tooltip>
+        </div>
       }
 
       {

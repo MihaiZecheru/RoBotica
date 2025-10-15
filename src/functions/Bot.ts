@@ -263,4 +263,27 @@ export default class Bot {
 
     return { translation: translation_response.choices[0].message.content!, meaning: meaning_response.choices[0].message.content! };
   }
+
+    /**
+   * Translate a message from English to the given `language` with AI.
+   * @param message The message in English to translate to `language`
+   * @param language The language to translate to. 
+   * @returns The translation of the English message in `language`.
+   */
+  public static async TranslateEnglishToLanguage(message: string, language: TLanguage): Promise<string> {
+    const response = await openAI.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        "role": "system",
+        "content": `Translate the message "${message}" from English to ${language}.
+        ${language === 'Spanish' ? 'Use mexican spanish' : ''} 
+        Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
+        Give just the translations separated by commas, nothing else. Do not wrap in quotes or anything.
+        Provide multiple translations if possible.
+        Ex: if given "beautiful" and the language is Spanish, respond with something like "bonito, hermoso, lindo" etc.`
+      }]
+    });
+
+    return response.choices[0].message.content!;
+  }
 }
