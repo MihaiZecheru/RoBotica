@@ -13,6 +13,7 @@ const AccountPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps
     // Update the user settings
     if (!user_settings || !user) return;
     user_settings.language = new_value as TLanguage;
+    window.sessionStorage.removeItem('songs'); // Clear the saved songs as they are in another language
     Database.UpdateUserSettings(user_settings, user.id as UserID);
   };
 
