@@ -16,12 +16,13 @@ const Navily = () => {
     <div className="navily-container">
       <Stack direction="column" spacing={2}>
         <div className="image-container">
-          <img src="/navily.png" style={{ width: '256px', height: '256px' }} onClick={handleImgClick} />
+          <img src="/navily.png" style={{ width: '228px', height: '228px' }} onClick={handleImgClick} />
         </div>
         <Box className="navily-item" onClick={() => navigate('/chat')}>Chat</Box>
         <Box className="navily-item" onClick={() => navigate('/reading')}>Reading</Box>
         <Box className="navily-item" onClick={() => navigate('/music')}>Music</Box>
         <Box className="navily-item" onClick={() => navigate('/chat/saved')}>Saved Chats</Box>
+        <Box className="navily-item" onClick={() => navigate('/vocab')}>Vocab List</Box>
         <Box className="navily-item" onClick={() => navigate('/account')}>Account</Box>
       </Stack>
     </div>

@@ -6,6 +6,7 @@ import TMessage from "./TMessage";
 import TStory from "./TStory";
 import { TUserSettings } from "./GetUser";
 import TSong from "./TSong";
+import TVocabListItem from "./TVocabListItem";
 
 export default class Database {
 
@@ -372,6 +373,49 @@ export default class Database {
         translation: translation,
         meaning: meaning
       }]);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  public static async AddWordToVocabList(word: string, language: TLanguage): Promise<void> {
+    const { error } = await supabase
+      .from('VocabList')
+      .insert([{ word, language }]);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  public static async GetVocabList(user_id: UserID, language: TLanguage): Promise<TVocabListItem[]> {
+    const { data, error } = await supabase
+      .from('VocabList')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('language', language);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    for (let i = 0; i < data.length; i++) {
+      data[i].when_added = new Date(data[i].when_added);
+    }
+
+    return data;
+  }
+
+  public static async DeleteVocabListItem(user_id: UserID, word: string): Promise<void> {
+    const { error } = await supabase
+      .from('VocabList')
+      .delete()
+      .eq('user_id', user_id)
+      .eq('word', word);
 
     if (error) {
       console.error(error);

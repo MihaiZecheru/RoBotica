@@ -27,25 +27,37 @@ const ClickableWord = ({ word, language }: Props) => {
   const [canBeClicked, setCanBeClicked] = useState<boolean>(true);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
+  const word_cleaned = word.replace(/[.,/\\#!?$%^&*;:{}=_`~()¡¿"”„«»‘’]/g, '').toLowerCase().trim();
+
   /**
    * When the word is clicked, get the translation and example sentence for the word
    * from the database, if it exists, otherwise generate it and add it to the database.
    * 
-   * Note: if ctrl+click, then the word is pronounced 
+   * Note: if ctrl+click, then the word is pronounced. if alt+click, then the word is added to the user's vocab list
    */
   const handleClick = (e: React.MouseEvent<HTMLSpanElement>) => {
     if (!canBeClicked) return;
-    
     // If ctrl+click, then pronounce the word using the text to speech API
     if (e.ctrlKey) {
       if (isPlaying) return;
       setIsPlaying(false);
-      return TextToSpeechAPI(word, language, false).then(blob => {
+      return TextToSpeechAPI(word_cleaned, language, false).then(blob => {
         const audio = new Audio(URL.createObjectURL(blob));
         if (document.querySelector("audio")) document.querySelector("audio")?.remove();
         document.body.appendChild(audio);
         audio.play();
         audio.onended = () => { audio.remove(); setIsPlaying(true); };
+      });
+    // If alt+click, the word is added to the user's vocab list
+    } else if (e.altKey) {
+      return Database.AddWordToVocabList(word_cleaned, language).then(() => {
+        showInfoModal("Success", `The word "${word_cleaned}" was added to your vocab list.`);
+      }).catch((err) => {
+        if (err.message === 'duplicate key value violates unique constraint "unique_user_word"') {
+          showInfoModal("Info", `"${word_cleaned}" is already in your vocab list`);
+        } else {
+          showInfoModal("Error", `UNKNOWN ERROR: Failed to add "${word_cleaned}" to your vocab list.`);
+        }
       });
     }
     
@@ -55,7 +67,6 @@ const ClickableWord = ({ word, language }: Props) => {
     const min_duration = 500;
     const startTime = new Date().getTime();
 
-    const word_cleaned = word.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\_\`\~\(\)\¡\¿\"\”]/g, '').toLowerCase().trim();
     Database.GetTranslationAndExamples(word_cleaned, language).then(async (response: TTranslationAndExamples | null) => {
       if (response === null) {
         try {
