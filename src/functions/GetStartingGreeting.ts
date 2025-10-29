@@ -1,7 +1,7 @@
 export default function GetStartingGreeting(language: string): string {
   switch (language) {
     case 'Romanian':
-      return 'Buna! Ce faci?';
+      return 'Bună! Ce faci?';
     case 'Spanish':
       return 'Hola! ¿Cómo estás?';
     case 'French':
