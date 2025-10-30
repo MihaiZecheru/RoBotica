@@ -19,7 +19,7 @@ const VocabListPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
     Database.GetVocabList(user_id, language).then((data) => {
       setVocabList(data);
     });
-  }, [language, user_id]);
+  }, [language, user_id, navigate]);
 
   const removeWord = (item: TVocabListItem) => {
     Database.DeleteVocabListItem(item.user_id, item.word);
