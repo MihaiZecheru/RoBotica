@@ -30,6 +30,7 @@ const VocabListPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
   const startQuiz = () => {
     const words = vocabList?.map((item: TVocabListItem) => item.word);
     localStorage.setItem('words', JSON.stringify(words));
+    localStorage.setItem('language', language);
     navigate('/vocab/quiz');
   };
 
