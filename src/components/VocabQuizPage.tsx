@@ -64,25 +64,31 @@ const VocabQuizPage = () => {
 
     if (response.correctness === 'Correct') {
       openInfoModal("Correct!", `"${inputValue}" is a translation for "${foreignWord}"`);
-      setQuizScores([...quizScores, 1]);
     } else if (response.correctness === 'Partial') {
       openInfoModal("Almost!", response.info!);
-      setQuizScores([...quizScores, 0.5]);
     } else if (response.correctness === 'Wrong') {
       openInfoModal("That's not right...", response.info!)
-      setQuizScores([...quizScores, 0]);
     }
 
-    // Check if the quiz is over
-    if (activeQuizWordIndex === quizWords!.length - 1) {
-      const sum = quizScores.reduce((acc: number, score: number) => acc + score, 0);
-      const scoreBreakdown = quizScores.reduce((acc: string, score: number, index: number) => acc + `${quizWords![index!]}: ${score}\n`, '');
-      openInfoModal("Quiz Results", `You got ${sum}/${quizWords!.length} points. Here's the breakdown:\n\n${scoreBreakdown}`);
-      setActiveQuizWordIndex(0);
-      setQuizScores([]);
-    } else {
-      setActiveQuizWordIndex(activeQuizWordIndex! + 1);
-    }
+    const newScore: number = response.correctness === "Correct" ? 1 : response.correctness === "Partial" ? 0.5 : 0;
+
+    setQuizScores(prevScores => {
+      const updatedScores = [...prevScores, newScore];
+
+      // Check if the quiz is over
+      if (activeQuizWordIndex === quizWords!.length - 1) {
+        const sum = updatedScores.reduce((acc: number, score: number) => acc + score, 0);
+        const scoreBreakdown = updatedScores.reduce((acc: string, score: number, index: number) => acc + `${quizWords![index!]}: ${score}\n`, '');
+        openInfoModal("Quiz Results", `You got ${sum}/${quizWords!.length} points. Here's the breakdown:\n\n${scoreBreakdown}`);
+        setActiveQuizWordIndex(0);
+        return []; // reset scores
+      } else {
+        // next question
+        setActiveQuizWordIndex(activeQuizWordIndex! + 1);
+      }
+
+      return updatedScores;
+    });
   };
 
   const inputOnKeyDown = (e: any) => {
