@@ -8,12 +8,14 @@ import { Button } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import TVocabListItem from "../database/TVocabListItem";
 import ClickableWord from "./ClickableWord";
+import useInfoModal from "./base/useInfoModal";
 
 const VocabListPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) => {
   const [vocabList, setVocabList] = useState<TVocabListItem[]>();
   const user_id = user?.id as UserID;
   const language = user_settings?.language as TLanguage;
   const navigate = useNavigate();
+  const showInfoModal = useInfoModal();
 
   useEffect(() => {
     Database.GetVocabList(user_id, language).then((data) => {
@@ -28,6 +30,11 @@ const VocabListPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
   };
 
   const startQuiz = () => {
+    if (vocabList?.length === 0) {
+      showInfoModal('Error', `You can't start a quiz if you have no words in your vocab list. Add words to your list by clicking on them while holding the 'Alt' key.`)
+      return;
+    }
+
     const words = vocabList?.map((item: TVocabListItem) => item.word);
     localStorage.setItem('words', JSON.stringify(words));
     localStorage.setItem('language', language);
