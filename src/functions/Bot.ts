@@ -7,6 +7,11 @@ import TSong from "../database/TSong";
 const openAI = new OpenAI({ apiKey: process.env.REACT_APP_OPENAI_API_KEY!, dangerouslyAllowBrowser: true, organization: process.env.REACT_APP_OPENAI_ORG_ID, project: process.env.REACT_APP_OPENAI_PROJECT_ID });
 const HISTORY_SIZE = 15;
 
+export type TAiQuizResponseEvaluation = {
+  correctness: 'Correct' | 'Partial' | 'Wrong';
+  info: string | null;
+}
+
 export default class Bot {
   /**
    * Generate a bot response to a user's message in a conversation.
@@ -285,5 +290,32 @@ export default class Bot {
     });
 
     return response.choices[0].message.content!;
+  }
+
+  public static async IsQuizResponseCorrect(foreignWord: string, foreignLanguage: TLanguage, userTranslation: string): Promise<TAiQuizResponseEvaluation> {
+    const response = await openAI.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        "role": "system",
+        "content": `The user is doing a vocab quiz. They were asked to translate words from ${foreignLanguage} to English.
+        The word was "${foreignWord}" and the user's translation was "${userTranslation}".
+        Respond with "Correct" if the user was fully correct, "Partial" if the user was somewhat right,
+        and "Wrong" if the user was fully wrong. If partial or wrong, follow up with 1-2 sentences explaining the correct translation
+        or the mistake. Be VERY brief; your overall response should be short.
+        Be forgiving in your grading; don't be pedantic. Give them the point if they give a correct definition.`
+      }]
+    });
+
+    const msg = response.choices[0].message.content;
+
+    if (msg === "Correct") {
+      return { correctness: 'Correct', info: null };
+    } else if (msg?.startsWith("Partial. ")) {
+      return { correctness: 'Partial', info: msg.slice("Partial. ".length)}
+    } else if (msg?.startsWith("Wrong")) {
+      return { correctness: 'Wrong', info: msg.slice("Wrong. ".length)}
+    } else {
+      throw new Error("AI returned an invalid response. Should return a message that starts with 'Correct', 'Partial', or 'Wrong'. The bot returned the following message: " + msg);
+    }
   }
 }
