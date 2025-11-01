@@ -52,7 +52,7 @@ const VocabListPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
         </div>
         <div style={{ overflowY: 'scroll', height: 'calc(100% - 36.5px - 3rem - 100px' }} className="white-scrollbar">
           {
-            vocabList?.length === 0 ? <p style={{ width: '20rem' }}>You don't have any words in your vocab list.<br/><br/>cxClick on words while holding the 'Alt' key to add them to the list.</p> :
+            vocabList?.length === 0 ? <p style={{ width: '20rem' }}>You don't have any words in your vocab list.<br/><br/>Click on words while holding the 'Alt' key to add them to the list.</p> :
             vocabList?.map((item: TVocabListItem) => (
               <div key={item.word + item.when_added} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '20rem' }}>
                 <ClickableWord word={item.word} language={item.language} />
