@@ -4,8 +4,10 @@ import useInfoModal from "./base/useInfoModal";
 import { Button, Input } from "@mui/material";
 import Bot, { TAiQuizResponseEvaluation } from "../functions/Bot";
 import TLanguage from "../database/TLanguage";
+import Confetti from 'react-confetti';
 
 const QUIZ_LENGTH: number = 10;
+const CONFETTI_ANIMATION_DURATION_MS: number = 5000;
 
 function getRandomWords(arr: string[], amount: number): string[] {
   const randomWords: string[] = [];
@@ -32,6 +34,7 @@ const VocabQuizPage = () => {
   const [inputValue, setInputValue] = useState<string>("");
   const [botLoading, setBotLoading] = useState<boolean>(false);
   const [quizScores, setQuizScores] = useState<number[]>([]);
+  const [is_confetti_open, set_is_confetti_open] = useState<boolean>();
   const openInfoModal = useInfoModal();
 
   useEffect(() => {
@@ -56,6 +59,11 @@ const VocabQuizPage = () => {
     setActiveQuizWordIndex(0);
   }, [navigate]);
 
+  const launch_confetti = () => {
+    set_is_confetti_open(true);
+    setTimeout(() => set_is_confetti_open(false), CONFETTI_ANIMATION_DURATION_MS);
+  };
+
   const handleSubmission = async () => {
     const foreignWord: string = quizWords![activeQuizWordIndex!];
     setBotLoading(true);
@@ -63,7 +71,7 @@ const VocabQuizPage = () => {
     setBotLoading(false);
 
     if (response.correctness === 'Correct') {
-      openInfoModal("Correct!", `"${inputValue}" is a translation for "${foreignWord}"`);
+      openInfoModal("Yipee!", `"${inputValue}" is a translation for "${foreignWord}"`);
     } else if (response.correctness === 'Partial') {
       openInfoModal("Almost!", response.info!);
     } else if (response.correctness === 'Wrong') {
@@ -77,6 +85,7 @@ const VocabQuizPage = () => {
 
       // Check if the quiz is over
       if (activeQuizWordIndex === quizWords!.length - 1) {
+        launch_confetti();
         const sum = updatedScores.reduce((acc: number, score: number) => acc + score, 0);
         const scoreBreakdown = updatedScores.reduce((acc: string, score: number, index: number) => acc + `${quizWords![index!]}: ${score}\n`, '');
         openInfoModal("Quiz Results", `You got ${sum}/${quizWords!.length} points. Here's the breakdown:\n\n${scoreBreakdown}`);
@@ -100,6 +109,7 @@ const VocabQuizPage = () => {
 
   return (
     <div style={{ backgroundColor: '#87cefa', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      { is_confetti_open && <Confetti width={window.innerWidth} height={window.innerHeight} initialVelocityY={20} /> }
       <div style={{ backgroundColor: 'white', borderRadius: '1rem', width: '40vw', height: '40vh' }}>
         <div style={{ width: '100%', height: '2rem', backgroundColor: 'var(--primary-blue)', borderTopLeftRadius: '1rem', borderTopRightRadius: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
           <span style={{ padding: '0.5rem', paddingRight: '1rem', color: 'white' }}>{(activeQuizWordIndex || 0) + 1}/{quizWords?.length}</span>
