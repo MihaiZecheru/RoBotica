@@ -1,10 +1,9 @@
-import OpenAI from "openai";
-import TLanguage from "../database/TLanguage";
+import { GoogleGenAI } from "@google/genai";import TLanguage from "../database/TLanguage";
 import TTranslationAndExamples from "../database/TTranslationAndExamples";
 import TStory from "../database/TStory";
 import TSong from "../database/TSong";
 
-const openAI = new OpenAI({ apiKey: process.env.REACT_APP_OPENAI_API_KEY!, dangerouslyAllowBrowser: true, organization: process.env.REACT_APP_OPENAI_ORG_ID, project: process.env.REACT_APP_OPENAI_PROJECT_ID });
+const gemini = new GoogleGenAI({ apiKey: process.env.REACT_APP_GEMINI_API_KEY! });
 const HISTORY_SIZE = 15;
 
 export type TAiQuizResponseEvaluation = {
@@ -13,6 +12,16 @@ export type TAiQuizResponseEvaluation = {
 }
 
 export default class Bot {
+
+  private static async PromptGeminiAI(message: string): Promise<string> {
+    const response = await gemini.models.generateContent({
+      model: "gemini-3.1-flash-lite-preview",
+      contents: message,
+    });
+
+    return response.text!;
+  }
+
   /**
    * Generate a bot response to a user's message in a conversation.
    * 
@@ -36,17 +45,11 @@ export default class Bot {
       }
     }, '');
 
-    const response = await openAI.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        "role": "system",
-        "content": `You are a native human ${language === 'Spanish' ? 'Mexican ' : ''}${language} speaker talking to a ${user_skill} ${user_gender}. Do not be formal. Be chill and very breif, only speak in ${language}. Swearing is encouraged.
+    return await this.PromptGeminiAI(
+      `You are a native human ${language === 'Spanish' ? 'Mexican ' : ''}${language} speaker talking to a ${user_skill} ${user_gender} that is learning ${language}. Do not be too formal, but don't use too much slang (at most one slang per message). Be brief, keep the conversation going, and only speak in ${language}. Swearing is okay, as the user should be exposed to all words.
         Here is the conversation history: ${conversation_history}
         Respond to the user's last message given the context: ${user_message}`
-      }]
-    });
-
-    return response.choices[0].message.content!;
+    );
   }
 
   /**
@@ -57,11 +60,8 @@ export default class Bot {
    * @returns The translation and two example sentences. TTranslationAndExamples
    */
   public static async GenerateTranslationAndExamplesForWord(word: string, language: TLanguage): Promise<TTranslationAndExamples> {
-    const response = await openAI.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        "role": "system",
-        "content": `Translate the word "${word}" from ${language} to English 
+    const message = await this.PromptGeminiAI(
+      `Translate the word "${word}" from ${language} to English 
         ${language === 'Spanish' ? 'Use mexican spanish' : ''}
 
         Then give two example sentences using the word "${word}" in ${language}, 
@@ -79,10 +79,8 @@ export default class Bot {
         
         Include punctuation in sentences. Do not wrap in quotes or anything.
         Have no line breaks. <x> is the value.`
-      }]
-    });
+    );
 
-    const message = response.choices[0].message.content!;
     const match = message.match(/WordTranslation:(.*)\sExample1:(.*)\sExample1Translation:(.*)\sExample2:(.*)\sExample2Translation:(.*)/); 
     if (!match) throw new Error('Could not interpret response from AI. Try again.');
 
@@ -111,18 +109,13 @@ export default class Bot {
    * @returns The English translation of the message.
    */
   public static async GenerateMessageTranslation(message: string, language: TLanguage): Promise<string> {
-    const response = await openAI.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        "role": "system",
-        "content": `Translate the message "${message}" from ${language} to English. 
+    return await this.PromptGeminiAI(
+      `Translate the message "${message}" from ${language} to English. 
         ${language === 'Spanish' ? 'Use mexican spanish' : ''} 
         Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
+        If necessary, specify in parentheses when slang is used (ex: mention that 'que pedo' is not actually 'what fart' in spanish).
         Give just the translation, nothing else. Do not wrap in quotes or anything.`
-      }]
-    });
-
-    return response.choices[0].message.content!;
+    );
   }
 
   /**
@@ -134,19 +127,14 @@ export default class Bot {
    * @returns The amount of mistakes contained in the message and the corrected message.
    */
   public static async PerformGrammarAndSpellingCheck(message: string, language: TLanguage): Promise<{ mistake_count: number, corrected_message: string }> {
-    const response = await openAI.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        "role": "system",
-        "content": `Given a message in ${language}, check for grammar and spelling mistakes by 
+    const corrected_message = await this.PromptGeminiAI(
+      `Given a message in ${language}, check for grammar and spelling mistakes by 
         providing a corrected version of the message.
         ${language === 'Romanian' ? "Be careful with correcting the hyphen. Make sure you use the hyphen properly! Example: it's 'jucătorul tău' not 'jucătorul-tău', and it's 'mi-a zis' not 'mi a zis'" : ''}
         Give the corrected message, and only the corrected message. 
         Nothing else, no quotations or nothing around the message. Here is the message: ${message}`
-      }]
-    });
+    );
 
-    const corrected_message = response.choices[0].message.content!;
     const mistake_count = this.GetMistakeCount(message, corrected_message);
     return { mistake_count, corrected_message: corrected_message };
   }
@@ -213,11 +201,8 @@ export default class Bot {
    */
   public static async GenerateStory(language: TLanguage, synopsis: string): Promise<Omit<TStory, 'id'>> {
     console.log(`GENERATING STORY IN ${language} ON: ${synopsis}`);
-    const response = await openAI.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        "role": "system",
-        "content": `Generate a short story in ${language} with the following synopsis: ${synopsis}. 
+    const message = await this.PromptGeminiAI(
+        `Generate a short story in ${language} with the following synopsis: ${synopsis}. 
         Make it interesting and engaging. Make it 5-10 paragraphs long. Title the story, too.
         Use modern language; do not use archaic words, phrases, or verb tenses. 
         Write less-formally, but not too casually. The story is not meant for kids. It can be sad/dark. 
@@ -230,10 +215,8 @@ export default class Bot {
         Story:
         
         You MUST contain the word 'Title:' and 'Story:' in your response.`
-      }]
-    });
+      );
 
-    const message = response.choices[0].message.content!;
     const match = message.match(new RegExp(/(Title|Titlu|Título|Titulo|Titel|Titre|Titolo|):(.*)\s+(Story|Poveste|Historia|Geschichte|Histoire|Storia|História):\s+(.*)/, 's'));
     if (!match) throw new Error('Could not interpret response from AI. Try again. Here was the message: ' + message);
     return { title: match[2].trim(), body: match[4].trim(), language };
@@ -245,28 +228,20 @@ export default class Bot {
    * @returns The translation and meaning of the lyric.
    */
   public static async GenerateLyricTranslationAndMeaning(lyric: string, language: TLanguage, song: TSong): Promise<{ translation: string, meaning: string }> {
-    const translation_response = await openAI.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        "role": "system",
-        "content": `Translate the lyric "${lyric}" from the song ${song.title} by ${song.artist} from ${language} to English.
+    const translation_response = await this.PromptGeminiAI(
+      `Translate the lyric "${lyric}" from the song ${song.title} by ${song.artist} from ${language} to English.
         ${language === 'Spanish' ? 'Use mexican spanish' : ''}
         Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
         Give just the translation, nothing else. Do not wrap in quotes or anything.`
-      }]
-    });
+    );
 
-    const meaning_response = await openAI.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        "role": "system",
-        "content": `Generate a short meaning of the lyric "${lyric}" from the song ${song.title} by ${song.artist}, which is in ${language}.
+    const meaning_response = await this.PromptGeminiAI(
+      `Generate a short meaning of the lyric "${lyric}" from the song ${song.title} by ${song.artist}, which is in ${language}.
         The meaning that you generate must be in English.
         Give just the breif meaning/interpretation of the lyric, nothing else. Do not wrap in quotes or anything.`
-      }]
-    });
+    );
 
-    return { translation: translation_response.choices[0].message.content!, meaning: meaning_response.choices[0].message.content! };
+    return { translation: translation_response, meaning: meaning_response };
   }
 
     /**
@@ -276,37 +251,25 @@ export default class Bot {
    * @returns The translation of the English message in `language`.
    */
   public static async TranslateEnglishToLanguage(message: string, language: TLanguage): Promise<string> {
-    const response = await openAI.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        "role": "system",
-        "content": `Translate the message "${message}" from English to ${language}.
+    return await this.PromptGeminiAI(
+      `Translate the message "${message}" from English to ${language}.
         ${language === 'Spanish' ? 'Use mexican spanish' : ''} 
         Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
         Give just the translations separated by commas, nothing else. Do not wrap in quotes or anything.
         Provide multiple translations if possible.
         Ex: if given "beautiful" and the language is Spanish, respond with something like "bonito, hermoso, lindo" etc.`
-      }]
-    });
-
-    return response.choices[0].message.content!;
+    );
   }
 
   public static async IsQuizResponseCorrect(foreignWord: string, foreignLanguage: TLanguage, userTranslation: string): Promise<TAiQuizResponseEvaluation> {
-    const response = await openAI.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{
-        "role": "system",
-        "content": `The user is doing a vocab quiz. They were asked to translate words from ${foreignLanguage} to English.
+    const msg = await this.PromptGeminiAI(
+      `The user is doing a vocab quiz. They were asked to translate words from ${foreignLanguage} to English.
         The word was "${foreignWord}" and the user's translation was "${userTranslation}".
         Respond with "Correct" if the user was fully correct, "Partial" if the user was somewhat right,
         and "Wrong" if the user was fully wrong. If partial or wrong, follow up with 1-2 sentences explaining the correct translation
         or the mistake. Be VERY brief; your overall response should be short.
         Be forgiving in your grading; don't be pedantic. Give them the point if they give a correct definition.`
-      }]
-    });
-
-    const msg = response.choices[0].message.content;
+    );
 
     if (msg === "Correct") {
       return { correctness: 'Correct', info: null };
