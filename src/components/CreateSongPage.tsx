@@ -7,6 +7,7 @@ import TLanguage, { LANGUAGES } from "../database/TLanguage";
 import Dropdown from "./Dropdown";
 import Database from "../database/Database";
 import Loading from "./Loading";
+import { getApiUrl } from "../functions/ApiConfig";
 
 const CreateSongPage = ({ user }: AuthenticatedComponentDefaultProps) => {
   const [searchResults, setSearchResults] = useState<TSong[]>([]);
@@ -67,7 +68,7 @@ const CreateSongPage = ({ user }: AuthenticatedComponentDefaultProps) => {
 
     setLoading(true);
 
-    fetch(`https://robotica.mzecheru.com/genius-search`, {
+    fetch(getApiUrl(`/genius-search`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ q: searchQuery })

@@ -1,10 +1,8 @@
-import { GoogleGenAI } from "@google/genai";import TLanguage from "../database/TLanguage";
+import TLanguage from "../database/TLanguage";
 import TTranslationAndExamples from "../database/TTranslationAndExamples";
 import TStory from "../database/TStory";
 import TSong from "../database/TSong";
-
-const gemini = new GoogleGenAI({ apiKey: process.env.REACT_APP_GEMINI_API_KEY! });
-const HISTORY_SIZE = 15;
+import { getApiUrl } from "./ApiConfig";
 
 export type TAiQuizResponseEvaluation = {
   correctness: 'Correct' | 'Partial' | 'Wrong';
@@ -12,15 +10,6 @@ export type TAiQuizResponseEvaluation = {
 }
 
 export default class Bot {
-
-  private static async PromptGeminiAI(message: string): Promise<string> {
-    const response = await gemini.models.generateContent({
-      model: "gemini-3.1-flash-lite-preview",
-      contents: message,
-    });
-
-    return response.text!;
-  }
 
   /**
    * Generate a bot response to a user's message in a conversation.
@@ -32,24 +21,32 @@ export default class Bot {
    * @param past_messages The conversation history, exluding the message to respond to.
    * @returns The AI-generated bot response.
    */
-  public static async GetBotResponseToMessage(user_message: string, language: TLanguage, user_skill: 'Beginner' | 'Intermediate', user_gender: 'Woman' | 'Man', past_messages: Array<{ content: string, is_bot: boolean }>): Promise<string> {
-    if (past_messages.length > HISTORY_SIZE) {
-      past_messages = past_messages.slice(past_messages.length - HISTORY_SIZE);
+  public static async GetBotResponseToMessage(
+    user_message: string,
+    language: TLanguage,
+    user_skill: 'Beginner' | 'Intermediate',
+    user_gender: 'Woman' | 'Man',
+    past_messages: Array<{ content: string, is_bot: boolean }>
+  ): Promise<string> {
+    const response = await fetch(getApiUrl('/api/bot/chat'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_message,
+        language,
+        user_skill,
+        user_gender,
+        past_messages,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
     }
 
-    const conversation_history: string = past_messages.reduce((acc: string, msg: { content: string, is_bot: boolean }) => {
-      if (msg.is_bot) {
-        return acc + `You said: ${msg.content}\n`;
-      } else {
-        return acc + `The user said: ${msg.content}\n`;
-      }
-    }, '');
-
-    return await this.PromptGeminiAI(
-      `You are a native human ${language === 'Spanish' ? 'Mexican ' : ''}${language} speaker talking to a ${user_skill} ${user_gender} that is learning ${language}. Do not be too formal, but don't use too much slang (at most one slang per message). Be brief, keep the conversation going, and only speak in ${language}. Swearing is okay, as the user should be exposed to all words.
-        Here is the conversation history: ${conversation_history}
-        Respond to the user's last message given the context: ${user_message}`
-    );
+    return await response.text();
   }
 
   /**
@@ -60,45 +57,19 @@ export default class Bot {
    * @returns The translation and two example sentences. TTranslationAndExamples
    */
   public static async GenerateTranslationAndExamplesForWord(word: string, language: TLanguage): Promise<TTranslationAndExamples> {
-    const message = await this.PromptGeminiAI(
-      `Translate the word "${word}" from ${language} to English 
-        ${language === 'Spanish' ? 'Use mexican spanish' : ''}
+    const response = await fetch(getApiUrl('/api/bot/translate-word'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ word, language }),
+    });
 
-        Then give two example sentences using the word "${word}" in ${language}, 
-        and an English translation for each. 
-        Be more literal in your translations (ex: 'Bună  ziua' is 'good day' not 'hello'), but not too literal (ex in spanish: 'humor' is 'mood', not 'humor'). 
-        If the word has multiple meanings, use one meaning for the first sentence, and another meaning for the second sentence.
-        
-        Response format is strictly the following, you must use the format exactly as is:
-        
-        WordTranslation:
-        Example1:
-        Example1Translation:
-        Example2:
-        Example2Translation:
-        
-        Include punctuation in sentences. Do not wrap in quotes or anything.
-        Have no line breaks. <x> is the value.`
-    );
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
 
-    const match = message.match(/WordTranslation:(.*)\sExample1:(.*)\sExample1Translation:(.*)\sExample2:(.*)\sExample2Translation:(.*)/); 
-    if (!match) throw new Error('Could not interpret response from AI. Try again.');
-
-    const word_translation = match[1].trim();
-    const example_sentence1 = match[2].trim();
-    const example_sentence1_translation = match[3].trim();
-    const example_sentence2 = match[4].trim();
-    const example_sentence2_translation = match[5].trim();
-
-    return {
-      word,
-      language,
-      translation: word_translation,
-      example_sentence1,
-      example_sentence1_translation,
-      example_sentence2,
-      example_sentence2_translation
-    };
+    return await response.json();
   }
 
   /**
@@ -109,13 +80,19 @@ export default class Bot {
    * @returns The English translation of the message.
    */
   public static async GenerateMessageTranslation(message: string, language: TLanguage): Promise<string> {
-    return await this.PromptGeminiAI(
-      `Translate the message "${message}" from ${language} to English. 
-        ${language === 'Spanish' ? 'Use mexican spanish' : ''} 
-        Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
-        If necessary, specify in parentheses when slang is used (ex: mention that 'que pedo' is not actually 'what fart' in spanish).
-        Give just the translation, nothing else. Do not wrap in quotes or anything.`
-    );
+    const response = await fetch(getApiUrl('/api/bot/translate-message'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message, language }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    return await response.text();
   }
 
   /**
@@ -127,16 +104,21 @@ export default class Bot {
    * @returns The amount of mistakes contained in the message and the corrected message.
    */
   public static async PerformGrammarAndSpellingCheck(message: string, language: TLanguage): Promise<{ mistake_count: number, corrected_message: string }> {
-    const corrected_message = await this.PromptGeminiAI(
-      `Given a message in ${language}, check for grammar and spelling mistakes by 
-        providing a corrected version of the message.
-        ${language === 'Romanian' ? "Be careful with correcting the hyphen. Make sure you use the hyphen properly! Example: it's 'jucătorul tău' not 'jucătorul-tău', and it's 'mi-a zis' not 'mi a zis'" : ''}
-        Give the corrected message, and only the corrected message. 
-        Nothing else, no quotations or nothing around the message. Here is the message: ${message}`
-    );
+    const response = await fetch(getApiUrl('/api/bot/grammar-check'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message, language }),
+    });
 
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    const { corrected_message } = await response.json();
     const mistake_count = this.GetMistakeCount(message, corrected_message);
-    return { mistake_count, corrected_message: corrected_message };
+    return { mistake_count, corrected_message };
   }
 
   /**
@@ -147,10 +129,6 @@ export default class Bot {
    * @returns The amount of mistakes the original string had.
    */
   private static GetMistakeCount(original: string, corrected: string): number {
-    // I have no idea how this ChatGPT algorithm works, but it does work.
-    // It uses 'edit distance' to make sure the strings are being compared properly,
-    // in case the corrected version is missing a word or has an extra word.
-
     // Does not strip the hyphen (-) because it is used in compound words.
     const strip_punctuation = (str: string) => str.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\_\`\~\(\)\¡\¿\"\”]/g, '');
     const strip_diactritics = (str: string) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -191,9 +169,6 @@ export default class Bot {
 
   /**
    * Generate a short story that follows the given `synopsis` in `language` with AI.
-   * This function is not part of the main application.
-   * It is used in GenerateAndUploadStory.ts to generate stories for the database,
-   * which is done by the admin when he wants to add more stories.
    * 
    * @param language The language the story should be in
    * @param synopsis Frame for the story. The story will adhere to the synopsis.
@@ -201,25 +176,19 @@ export default class Bot {
    */
   public static async GenerateStory(language: TLanguage, synopsis: string): Promise<Omit<TStory, 'id'>> {
     console.log(`GENERATING STORY IN ${language} ON: ${synopsis}`);
-    const message = await this.PromptGeminiAI(
-        `Generate a short story in ${language} with the following synopsis: ${synopsis}. 
-        Make it interesting and engaging. Make it 5-10 paragraphs long. Title the story, too.
-        Use modern language; do not use archaic words, phrases, or verb tenses. 
-        Write less-formally, but not too casually. The story is not meant for kids. It can be sad/dark. 
-        Do not always have a happy ending. Have a realistic ending.
-        ${language === 'Romanian' ? 'Do not use the word "său". Use "lui" instead. Do not use "deși" either.' : ''}
-        ${language === 'Spanish' ? 'Use mexican spanish' : ''}
-        Do not wrap the title in quotes or anything. The output should be in the following format:
-        
-        Title:
-        Story:
-        
-        You MUST contain the word 'Title:' and 'Story:' in your response.`
-      );
+    const response = await fetch(getApiUrl('/api/bot/generate-story'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ language, synopsis }),
+    });
 
-    const match = message.match(new RegExp(/(Title|Titlu|Título|Titulo|Titel|Titre|Titolo|):(.*)\s+(Story|Poveste|Historia|Geschichte|Histoire|Storia|História):\s+(.*)/, 's'));
-    if (!match) throw new Error('Could not interpret response from AI. Try again. Here was the message: ' + message);
-    return { title: match[2].trim(), body: match[4].trim(), language };
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    return await response.json();
   }
 
   /**
@@ -228,57 +197,56 @@ export default class Bot {
    * @returns The translation and meaning of the lyric.
    */
   public static async GenerateLyricTranslationAndMeaning(lyric: string, language: TLanguage, song: TSong): Promise<{ translation: string, meaning: string }> {
-    const translation_response = await this.PromptGeminiAI(
-      `Translate the lyric "${lyric}" from the song ${song.title} by ${song.artist} from ${language} to English.
-        ${language === 'Spanish' ? 'Use mexican spanish' : ''}
-        Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
-        Give just the translation, nothing else. Do not wrap in quotes or anything.`
-    );
+    const response = await fetch(getApiUrl('/api/bot/lyric-translation'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ lyric, language, song }),
+    });
 
-    const meaning_response = await this.PromptGeminiAI(
-      `Generate a short meaning of the lyric "${lyric}" from the song ${song.title} by ${song.artist}, which is in ${language}.
-        The meaning that you generate must be in English.
-        Give just the breif meaning/interpretation of the lyric, nothing else. Do not wrap in quotes or anything.`
-    );
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
 
-    return { translation: translation_response, meaning: meaning_response };
+    return await response.json();
   }
 
-    /**
+  /**
    * Translate a message from English to the given `language` with AI.
    * @param message The message in English to translate to `language`
    * @param language The language to translate to. 
    * @returns The translation of the English message in `language`.
    */
   public static async TranslateEnglishToLanguage(message: string, language: TLanguage): Promise<string> {
-    return await this.PromptGeminiAI(
-      `Translate the message "${message}" from English to ${language}.
-        ${language === 'Spanish' ? 'Use mexican spanish' : ''} 
-        Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
-        Give just the translations separated by commas, nothing else. Do not wrap in quotes or anything.
-        Provide multiple translations if possible.
-        Ex: if given "beautiful" and the language is Spanish, respond with something like "bonito, hermoso, lindo" etc.`
-    );
+    const response = await fetch(getApiUrl('/api/bot/translate-english'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message, language }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+
+    return await response.text();
   }
 
   public static async IsQuizResponseCorrect(foreignWord: string, foreignLanguage: TLanguage, userTranslation: string): Promise<TAiQuizResponseEvaluation> {
-    const msg = await this.PromptGeminiAI(
-      `The user is doing a vocab quiz. They were asked to translate words from ${foreignLanguage} to English.
-        The word was "${foreignWord}" and the user's translation was "${userTranslation}".
-        Respond with "Correct" if the user was fully correct, "Partial" if the user was somewhat right,
-        and "Wrong" if the user was fully wrong. If partial or wrong, follow up with 1-2 sentences explaining the correct translation
-        or the mistake. Be VERY brief; your overall response should be short.
-        Be forgiving in your grading; don't be pedantic. Give them the point if they give a correct definition.`
-    );
+    const response = await fetch(getApiUrl('/api/bot/evaluate-quiz'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ foreignWord, foreignLanguage, userTranslation }),
+    });
 
-    if (msg === "Correct") {
-      return { correctness: 'Correct', info: null };
-    } else if (msg?.startsWith("Partial. ")) {
-      return { correctness: 'Partial', info: msg.slice("Partial. ".length)}
-    } else if (msg?.startsWith("Wrong")) {
-      return { correctness: 'Wrong', info: msg.slice("Wrong. ".length)}
-    } else {
-      throw new Error("AI returned an invalid response. Should return a message that starts with 'Correct', 'Partial', or 'Wrong'. The bot returned the following message: " + msg);
+    if (!response.ok) {
+      throw new Error(await response.text());
     }
+
+    return await response.json();
   }
 }
