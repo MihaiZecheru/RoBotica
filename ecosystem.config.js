@@ -1,9 +1,9 @@
 module.exports = {
   apps: [{
     name: "RoBotica",
-    script: "/home/RoBotica/server.js",
+    script: "npm",
+    args: "start",
     watch: false,
     ignore_watch: ["node_modules"],
-    interpreter: "node",
   }]
 }

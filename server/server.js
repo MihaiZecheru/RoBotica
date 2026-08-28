@@ -11,8 +11,8 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
-const port = 3006;
-const build_name = 'build';
+const port = process.env.PORT;
+const build_name = '../build';
 
 const geminiApiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey: geminiApiKey || '' });
