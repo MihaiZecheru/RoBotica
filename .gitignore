@@ -26,3 +26,5 @@ yarn-error.log*
 RoBotica.code-workspace
 server/google-service-credentials.json
 server/node_modules
+
+keep-alive.log
