@@ -4,6 +4,8 @@ const { SpeechClient } = require('@google-cloud/speech');
 const path = require('path');
 const cors = require('cors');
 const cheerio = require('cheerio');
+const fs = require('fs');
+const { execFile } = require('child_process');
 const dotenv = require('dotenv');
 const { GoogleGenAI } = require('@google/genai');
 
@@ -11,8 +13,12 @@ dotenv.config({ path: path.resolve(__dirname, '.env') });
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3006;
 const build_name = '../build';
+const MUSIC_DIR = process.env.MUSIC_DIR || path.join(__dirname, 'music');
+if (!fs.existsSync(MUSIC_DIR)) {
+  fs.mkdirSync(MUSIC_DIR, { recursive: true });
+}
 
 const geminiApiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey: geminiApiKey || '' });
@@ -417,6 +423,258 @@ Be forgiving in your grading; don't be pedantic. Give them the point if they giv
   } catch (error) {
     console.error('Error in /api/bot/evaluate-quiz:', error);
     res.status(500).send('Failed to evaluate quiz');
+  }
+});
+
+/**
+ * Endpoint: /api/lyrics
+ * Proxies lyrics requests to LRCLIB (synced and plain lyrics)
+ */
+app.get('/api/lyrics', async (req, res) => {
+  const track_name = (req.query.track_name || '').toString().trim();
+  const artist_name = (req.query.artist_name || '').toString().trim();
+  const duration = req.query.duration ? parseInt(req.query.duration.toString(), 10) : 0;
+
+  if (!track_name) {
+    return res.status(400).json({ error: 'track_name required' });
+  }
+
+  try {
+    // 1. Query exact match by track, artist, and duration
+    const params = new URLSearchParams({ track_name, artist_name });
+    if (duration) params.append('duration', duration.toString());
+
+    let resp = await fetch(`https://lrclib.net/api/get?${params.toString()}`, {
+      headers: { 'User-Agent': 'RoBotica/1.0 (https://robotica.com)' }
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      return res.json({
+        syncedLyrics: data.syncedLyrics || null,
+        plainLyrics: data.plainLyrics || null
+      });
+    }
+
+    // 2. Fallback to fuzzy search if exact match isn't found
+    const searchParams = new URLSearchParams({ q: `${track_name} ${artist_name}` });
+    resp = await fetch(`https://lrclib.net/api/search?${searchParams.toString()}`, {
+      headers: { 'User-Agent': 'RoBotica/1.0 (https://robotica.com)' }
+    });
+
+    if (resp.ok) {
+      const results = await resp.json();
+      if (Array.isArray(results) && results.length > 0) {
+        const match = results[0];
+        return res.json({
+          syncedLyrics: match.syncedLyrics || null,
+          plainLyrics: match.plainLyrics || null
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error in /api/lyrics:', error);
+  }
+
+  return res.json({ syncedLyrics: null, plainLyrics: null });
+});
+
+/**
+ * Endpoint: /api/stream/:youtube_id
+ * Streams audio with HTTP 206 byte-range support for seeking
+ */
+app.get('/api/stream/:youtube_id', (req, res) => {
+  const youtube_id = req.params.youtube_id;
+  let filePath = path.join(MUSIC_DIR, `${youtube_id}.mp3`);
+  if (!fs.existsSync(filePath)) {
+    const altPath = path.join(__dirname, '../music', `${youtube_id}.mp3`);
+    if (fs.existsSync(altPath)) {
+      filePath = altPath;
+    } else {
+      return res.status(404).json({ error: 'Audio file not found' });
+    }
+  }
+
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+  const range = req.headers.range;
+
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+    if (start >= fileSize) {
+      res.status(416).send(`Requested range not satisfiable\n${start} >= ${fileSize}`);
+      return;
+    }
+
+    const chunksize = (end - start) + 1;
+    const file = fs.createReadStream(filePath, { start, end });
+    const head = {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunksize,
+      'Content-Type': 'audio/mpeg',
+    };
+
+    res.writeHead(206, head);
+    file.pipe(res);
+  } else {
+    const head = {
+      'Content-Length': fileSize,
+      'Content-Type': 'audio/mpeg',
+      'Accept-Ranges': 'bytes',
+    };
+    res.writeHead(200, head);
+    fs.createReadStream(filePath).pipe(res);
+  }
+});
+
+/**
+ * Helper to extract YouTube 11-char ID from full URL or ID
+ */
+function extractYouTubeId(input) {
+  if (!input) return null;
+  const str = input.toString().trim();
+  const match = str.match(/(?:v=|youtu\.be\/|embed\/|\/v\/|\/e\/|watch\?v=|&v=)([a-zA-Z0-9_-]{11})/);
+  if (match) return match[1];
+  const directMatch = str.match(/^([a-zA-Z0-9_-]{11})$/);
+  if (directMatch) return directMatch[1];
+  return null;
+}
+
+/**
+ * Execute yt-dlp across platforms using python -m yt_dlp or direct yt-dlp binary
+ */
+function runYtDlp(args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+    const fullArgs = ['-m', 'yt_dlp', '--js-runtimes', 'node:node', ...args];
+
+    execFile(pythonCmd, fullArgs, { maxBuffer: 15 * 1024 * 1024, ...options }, (error, stdout, stderr) => {
+      if (error) {
+        // Fallback to yt-dlp binary if python -m fails
+        execFile('yt-dlp', ['--js-runtimes', 'node:node', ...args], { maxBuffer: 15 * 1024 * 1024, ...options }, (err2, stdout2, stderr2) => {
+          if (err2) {
+            return reject(new Error(stderr || err2.message));
+          }
+          resolve({ stdout: stdout2, stderr: stderr2 });
+        });
+      } else {
+        resolve({ stdout, stderr });
+      }
+    });
+  });
+}
+
+/**
+ * Endpoint: /api/youtube/metadata
+ * Extracts song title, artist, year, and thumbnail from YouTube using yt-dlp
+ */
+app.get('/api/youtube/metadata', async (req, res) => {
+  const input = req.query.id || req.query.url;
+  const youtube_video_id = extractYouTubeId(input);
+
+  if (!youtube_video_id) {
+    return res.status(400).json({ error: 'Valid 11-character YouTube video ID or URL is required.' });
+  }
+
+  try {
+    const { stdout } = await runYtDlp([
+      '--dump-json',
+      '--skip-download',
+      `https://www.youtube.com/watch?v=${youtube_video_id}`
+    ]);
+
+    const data = JSON.parse(stdout);
+    const title = data.track || data.title || '';
+    const artist = data.artist || data.uploader || data.channel || '';
+    const year = data.release_year || (data.upload_date ? parseInt(data.upload_date.slice(0, 4), 10) : null);
+
+    const primaryAudioPath = path.join(MUSIC_DIR, `${youtube_video_id}.mp3`);
+    const altAudioPath = path.join(__dirname, '../music', `${youtube_video_id}.mp3`);
+    const audio_downloaded = fs.existsSync(primaryAudioPath) || fs.existsSync(altAudioPath);
+
+    res.json({
+      youtube_video_id,
+      title,
+      artist,
+      year: year || null,
+      thumbnail_url: `https://i.ytimg.com/vi/${youtube_video_id}/hqdefault.jpg`,
+      image_url: `https://i.ytimg.com/vi/${youtube_video_id}/maxresdefault.jpg`,
+      audio_downloaded
+    });
+  } catch (err) {
+    console.error('Error extracting YouTube metadata:', err.message);
+    res.status(500).json({ error: 'Failed to extract YouTube metadata', details: err.message });
+  }
+});
+
+/**
+ * Endpoint: /api/music/download
+ * Downloads YouTube audio stream as 192k MP3 into server/music/<id>.mp3 using yt-dlp
+ */
+app.post('/api/music/download', async (req, res) => {
+  const input = req.body.youtube_video_id || req.body.url;
+  const youtube_video_id = extractYouTubeId(input);
+
+  if (!youtube_video_id) {
+    return res.status(400).json({ error: 'Valid 11-character YouTube video ID or URL is required.' });
+  }
+
+  const primaryAudioPath = path.join(MUSIC_DIR, `${youtube_video_id}.mp3`);
+  const rootMusicDir = path.join(__dirname, '../music');
+  const altAudioPath = path.join(rootMusicDir, `${youtube_video_id}.mp3`);
+
+  if (!fs.existsSync(rootMusicDir)) {
+    try { fs.mkdirSync(rootMusicDir, { recursive: true }); } catch (_) {}
+  }
+
+  // If already exists, return success
+  if (fs.existsSync(primaryAudioPath) || fs.existsSync(altAudioPath)) {
+    if (fs.existsSync(primaryAudioPath) && !fs.existsSync(altAudioPath)) {
+      try { fs.copyFileSync(primaryAudioPath, altAudioPath); } catch (_) {}
+    } else if (fs.existsSync(altAudioPath) && !fs.existsSync(primaryAudioPath)) {
+      try { fs.copyFileSync(altAudioPath, primaryAudioPath); } catch (_) {}
+    }
+    return res.json({
+      success: true,
+      message: 'Audio already exists on server',
+      already_existed: true,
+      youtube_video_id,
+      stream_url: `/api/stream/${youtube_video_id}`
+    });
+  }
+
+  try {
+    const outputPattern = path.join(MUSIC_DIR, `${youtube_video_id}.%(ext)s`);
+    await runYtDlp([
+      '-x',
+      '--audio-format', 'mp3',
+      '--audio-quality', '192K',
+      '--no-playlist',
+      '-o', outputPattern,
+      `https://www.youtube.com/watch?v=${youtube_video_id}`
+    ]);
+
+    if (fs.existsSync(primaryAudioPath)) {
+      try {
+        fs.copyFileSync(primaryAudioPath, altAudioPath);
+      } catch (_) {}
+      return res.json({
+        success: true,
+        message: 'Audio downloaded successfully',
+        already_existed: false,
+        youtube_video_id,
+        stream_url: `/api/stream/${youtube_video_id}`
+      });
+    } else {
+      return res.status(500).json({ error: 'Audio conversion finished but MP3 file was not found.' });
+    }
+  } catch (err) {
+    console.error('Error downloading audio via yt-dlp:', err.message);
+    return res.status(500).json({ error: 'Failed to download audio', details: err.message });
   }
 });
 

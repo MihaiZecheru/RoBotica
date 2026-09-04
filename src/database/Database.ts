@@ -300,33 +300,81 @@ export default class Database {
   public static async AddSong(
     language: TLanguage, title: string, artist: string, year: number | null,
     lyrics: string, thumbnail_url: string, image_url: string,
-    youtube_video_id: string): Promise<void> {
-    // Check if song exists first
-    const { data, error } = await supabase
+    youtube_video_id: string): Promise<{ id: SongID, isNew: boolean }> {
+    let existingId: SongID | null = null;
+
+    // 1. Check if song exists by youtube_video_id
+    if (youtube_video_id) {
+      const { data: byYt, error: ytErr } = await supabase
+        .from('Songs')
+        .select('id')
+        .eq('youtube_video_id', youtube_video_id)
+        .limit(1);
+
+      if (!ytErr && byYt && byYt.length > 0) {
+        existingId = byYt[0].id as SongID;
+      }
+    }
+
+    // 2. Check if song exists by title and artist
+    if (!existingId) {
+      const { data: byTitleArtist, error: taErr } = await supabase
+        .from('Songs')
+        .select('id')
+        .eq('title', title)
+        .eq('artist', artist)
+        .limit(1);
+
+      if (!taErr && byTitleArtist && byTitleArtist.length > 0) {
+        existingId = byTitleArtist[0].id as SongID;
+      }
+    }
+
+    // 3. Update if existing
+    if (existingId) {
+      const { error: updateError } = await supabase
+        .from('Songs')
+        .update({
+          language,
+          title,
+          artist,
+          year: year ? parseInt(year.toString(), 10) : null,
+          lyrics: lyrics || '',
+          thumbnail_url: thumbnail_url || `https://i.ytimg.com/vi/${youtube_video_id}/hqdefault.jpg`,
+          image_url: image_url || `https://i.ytimg.com/vi/${youtube_video_id}/maxresdefault.jpg`,
+          youtube_video_id
+        })
+        .eq('id', existingId);
+
+      if (updateError) {
+        console.error('Error updating song in DB:', updateError);
+        throw updateError;
+      }
+
+      return { id: existingId, isNew: false };
+    }
+
+    // 4. Insert new song
+    const { data, error: insertError } = await supabase
       .from('Songs')
-      .select('id')
-      .eq('title', title)
-      .eq('artist', artist);
+      .insert([{
+        language,
+        title,
+        artist,
+        year: year ? parseInt(year.toString(), 10) : null,
+        lyrics: lyrics || '',
+        thumbnail_url: thumbnail_url || `https://i.ytimg.com/vi/${youtube_video_id}/hqdefault.jpg`,
+        image_url: image_url || `https://i.ytimg.com/vi/${youtube_video_id}/maxresdefault.jpg`,
+        youtube_video_id
+      }])
+      .select('id');
 
-    if (error) {
-      console.error(error);
-      throw error;
+    if (insertError) {
+      console.error('Error inserting song in DB:', insertError);
+      throw insertError;
     }
 
-    if (data.length > 0) {
-      console.error(`Song "${title}" by "${artist}" already exists in the database`);
-      alert(`Song "${title}" by "${artist}" already exists in the database`);
-      return;
-    }
-
-    const { error: e1 } = await supabase
-      .from('Songs')
-      .insert([{ language, title, artist, year, lyrics, thumbnail_url, image_url, youtube_video_id }]);
-
-    if (e1) {
-      console.error(e1);
-      throw error;
-    }
+    return { id: data[0].id as SongID, isNew: true };
   }
 
   public static async GetSong(id: SongID): Promise<TSong> {
