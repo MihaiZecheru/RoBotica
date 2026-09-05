@@ -4,12 +4,18 @@ import TLanguage from "../database/TLanguage";
 import { useEffect, useState } from "react";
 import TextToSpeechAPI from "../functions/TextToSpeechAPI";
 
+export const TTS_AUDIO_ID = "text-to-speech-audio";
 let activeTTSAudio: HTMLAudioElement | null = null;
 
 export const stopActiveTTS = () => {
   if (activeTTSAudio) {
     activeTTSAudio.pause();
     activeTTSAudio = null;
+  }
+  const existing = document.getElementById(TTS_AUDIO_ID) as HTMLAudioElement | null;
+  if (existing) {
+    existing.pause();
+    existing.remove();
   }
 };
 
@@ -31,12 +37,7 @@ const TextToSpeech = ({ text, language, ssml }: Props) => {
 
   useEffect(() => {
     return () => {
-      if (audio) {
-        audio.pause();
-        if (activeTTSAudio === audio) {
-          activeTTSAudio = null;
-        }
-      }
+      stopActiveTTS();
     };
   }, [audio]);
 
@@ -47,6 +48,8 @@ const TextToSpeech = ({ text, language, ssml }: Props) => {
     stopActiveTTS();
     const blob: Blob = await TextToSpeechAPI(text, language, ssml || false);
     const _audio = new Audio(URL.createObjectURL(blob));
+    _audio.id = TTS_AUDIO_ID;
+    document.body.appendChild(_audio);
     activeTTSAudio = _audio;
 
     setIsLoading(false);
@@ -57,18 +60,17 @@ const TextToSpeech = ({ text, language, ssml }: Props) => {
       if (activeTTSAudio === _audio) {
         activeTTSAudio = null;
       }
+      const existing = document.getElementById(TTS_AUDIO_ID);
+      if (existing) {
+        existing.remove();
+      }
       setIsPlaying(false);
     };
   };
 
   const stopAudio = () => {
-    if (audio) {
-      audio.pause();
-      if (activeTTSAudio === audio) {
-        activeTTSAudio = null;
-      }
-      setIsPlaying(false);
-    }
+    stopActiveTTS();
+    setIsPlaying(false);
   };
 
   return (

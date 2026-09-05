@@ -239,6 +239,7 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
                 ) : (
                   <audio
                     ref={audioRef}
+                    id="song-audio-player"
                     controls
                     className="song-audio-element"
                     src={audioStreamUrl}
