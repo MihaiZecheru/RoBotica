@@ -23,8 +23,11 @@ if (!fs.existsSync(MUSIC_DIR)) {
 const geminiApiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
 const ai = new GoogleGenAI({ apiKey: geminiApiKey || '' });
 
-// Set the environment variable for the Google Cloud credentials
-process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(__dirname, 'google-service-credentials.json');
+// Set the environment variable for the Google Cloud credentials if the file exists
+const defaultCredentialsPath = path.join(__dirname, 'google-service-credentials.json');
+if (fs.existsSync(defaultCredentialsPath)) {
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = defaultCredentialsPath;
+}
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Larger payload limit due to audio data
@@ -76,8 +79,8 @@ app.post('/text-to-speech', async (req, res) => {
     res.setHeader('Content-Type', 'audio/mpeg');
     res.send(response.audioContent);
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Failed to process request - internal server error');
+    console.error('Text-to-Speech Error:', error);
+    res.status(500).send(error.message || 'Failed to process request - internal server error');
   }
 });
 
@@ -126,8 +129,8 @@ app.post('/speech-to-text', async (req, res) => {
       .join('\n');
     res.send(transcription);
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('Failed to process request - internal server error');
+    console.error('Speech-to-Text Error:', error);
+    res.status(500).send(error.message || 'Failed to process request - internal server error');
   }
 });
 

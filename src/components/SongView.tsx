@@ -54,7 +54,7 @@ function create_embed(video_id: string, frame_title: string) {
       width="100%"
       height="260"
       style={{ borderRadius: '16px', border: 'none' }}
-      src={`https://www.youtube.com/embed/${video_id}?autoplay=1`}
+      src={`https://www.youtube.com/embed/${video_id}?autoplay=1&enablejsapi=1`}
       title={frame_title}
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       referrerPolicy="strict-origin-when-cross-origin"
@@ -153,6 +153,18 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
     if (audioRef.current) {
       audioRef.current.currentTime = time;
       audioRef.current.play().catch(() => {});
+    }
+  };
+
+  const pausePlayback = () => {
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+    }
+    if (useYouTubeFallback) {
+      const iframe = document.querySelector('.song-player-panel iframe') as HTMLIFrameElement | null;
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+      }
     }
   };
 
@@ -299,12 +311,12 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
 
                         <div className="lyric-text-content">
                           {line.text.split(" ").map((word, wIdx) => (
-                            <ClickableWord key={wIdx} word={word} language={song.language} />
+                            <ClickableWord key={wIdx} word={word} language={song.language} onTranslate={pausePlayback} />
                           ))}
                         </div>
 
                         <div className="lyric-line-actions" onClick={(e) => e.stopPropagation()}>
-                          <ClickableLyric language={song.language} lyric={line.text} song={song} />
+                          <ClickableLyric language={song.language} lyric={line.text} song={song} onTranslate={pausePlayback} />
                         </div>
                       </div>
                     );
@@ -316,11 +328,11 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
                   {song.lyrics.trim().split("\n").map((lyric, index) => (
                     <div key={index} style={{ marginBottom: '6px' }}>
                       {lyric.split(" ").map((word, wIdx) => (
-                        <ClickableWord key={wIdx} word={word} language={song.language} />
+                        <ClickableWord key={wIdx} word={word} language={song.language} onTranslate={pausePlayback} />
                       ))}
                       {lyric === "" && <br />}
                       {!lyric.startsWith("[") && !lyric.endsWith("]") && lyric !== "" && (
-                        <ClickableLyric language={song.language} lyric={lyric} song={song} />
+                        <ClickableLyric language={song.language} lyric={lyric} song={song} onTranslate={pausePlayback} />
                       )}
                     </div>
                   ))}

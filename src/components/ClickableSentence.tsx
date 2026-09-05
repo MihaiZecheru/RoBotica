@@ -7,7 +7,7 @@ import useInfoModal from "./base/useInfoModal";
 import Database from "../database/Database";
 import '../styles/translate-sentence-icon.css';
 import { StoryID } from "../database/ID";
-import TextToSpeech from "./TextToSpeech";
+import TextToSpeech, { stopActiveTTS } from "./TextToSpeech";
 import TextToSpeechAPI from "../functions/TextToSpeechAPI";
 import isMobile from "../functions/isMobile";
 import Loading from "./Loading";
@@ -29,13 +29,12 @@ const ClickableSentence = ({ language, sentence, story_id }: Props) => {
 
     if (event.ctrlKey) {
       if (isPlaying) return;
-      setIsPlaying(false);
+      stopActiveTTS();
+      setIsPlaying(true);
       return TextToSpeechAPI(sentence, language, false).then(blob => {
         const audio = new Audio(URL.createObjectURL(blob));
-        if (document.querySelector("audio")) document.querySelector("audio")?.remove();
-        document.body.appendChild(audio);
-        audio.play();
-        audio.onended = () => { audio.remove(); setIsPlaying(true); };
+        audio.play().catch(() => {});
+        audio.onended = () => { setIsPlaying(false); };
       });
     }
 

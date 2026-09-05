@@ -5,9 +5,9 @@ import Bot from "../functions/Bot";
 import useInfoModal from "./base/useInfoModal";
 import '../styles/clickable-word.css';
 import { Tooltip } from "@mui/material";
-import { MouseEventHandler, useState } from "react";
+import { useState } from "react";
 import Loading from "./Loading";
-import TextToSpeech from "./TextToSpeech";
+import TextToSpeech, { stopActiveTTS } from "./TextToSpeech";
 import TextToSpeechAPI from "../functions/TextToSpeechAPI";
 import isMobile from "../functions/isMobile";
 
@@ -17,12 +17,13 @@ interface Props {
    */
   word: string;
   language: TLanguage;
+  onTranslate?: () => void;
 }
 
 /**
  * Represents a word in a message that can be clicked on to get a translation and example sentence.
  */
-const ClickableWord = ({ word, language }: Props) => {
+const ClickableWord = ({ word, language, onTranslate }: Props) => {
   const showInfoModal = useInfoModal();
   const [canBeClicked, setCanBeClicked] = useState<boolean>(true);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -37,16 +38,16 @@ const ClickableWord = ({ word, language }: Props) => {
    */
   const handleClick = (e: React.MouseEvent<HTMLSpanElement>) => {
     if (!canBeClicked) return;
+    onTranslate?.();
     // If ctrl+click, then pronounce the word using the text to speech API
     if (e.ctrlKey) {
       if (isPlaying) return;
-      setIsPlaying(false);
+      stopActiveTTS();
+      setIsPlaying(true);
       return TextToSpeechAPI(word_cleaned, language, false).then(blob => {
         const audio = new Audio(URL.createObjectURL(blob));
-        if (document.querySelector("audio")) document.querySelector("audio")?.remove();
-        document.body.appendChild(audio);
-        audio.play();
-        audio.onended = () => { audio.remove(); setIsPlaying(true); };
+        audio.play().catch(() => {});
+        audio.onended = () => { setIsPlaying(false); };
       });
     // If alt+click, the word is added to the user's vocab list
     } else if (e.altKey) {

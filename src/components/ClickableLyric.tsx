@@ -19,15 +19,17 @@ interface Props {
    * The song the lyric belongs to.
    */
   song: TSong;
+  onTranslate?: () => void;
 }
 
-const ClickableLyric = ({ language, lyric, song }: Props) => {
+const ClickableLyric = ({ language, lyric, song, onTranslate }: Props) => {
   const showInfoModal = useInfoModal();  
   const [canBeClicked, setCanBeClicked] = useState(true);
 
   // Translate on click
   const handleClick = async (event: React.MouseEvent) => {
     if (!canBeClicked) return;
+    onTranslate?.();
 
     setCanBeClicked(false);
     const min_duration = 500;

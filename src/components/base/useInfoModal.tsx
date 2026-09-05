@@ -1,5 +1,6 @@
 import React, { createContext, ReactElement, useContext, useState } from 'react';
 import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button } from '@mui/material';
+import { stopActiveTTS } from '../TextToSpeech';
 
 export interface InfoModalState {
   open: boolean;
@@ -26,14 +27,8 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const handleClose = () => {
-    // Pause the audio on close if there was a translate button on the modal
-    if (modalState?.translate_button !== undefined) {
-      const audio = document.querySelector('audio');
-      console.log(audio);
-      audio?.pause();
-      audio?.remove();
-    }
-    
+    // Stop any playing TTS audio when the modal is closed
+    stopActiveTTS();
     setModalState(null);
   };
 
