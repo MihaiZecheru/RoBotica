@@ -13,7 +13,6 @@ import StoryView from './components/StoryView';
 import CreateStoryPage from './components/CreateStoryPage';
 import MusicSearch from './components/MusicSearch';
 import SongView from './components/SongView';
-import CreateSongPage from './components/CreateSongPage';
 import VocabListPage from './components/VocabListPage';
 import VocabQuizPage from './components/VocabQuizPage';
 
@@ -37,7 +36,6 @@ function App() {
           <Route path="/reading/:id" element={ <Authenticator component={ <StoryView /> } /> } />
           <Route path="/music/:id" element={ <Authenticator component={ <SongView /> } /> } />
           <Route path="/create-story" element={ <Authenticator component={ <CreateStoryPage /> } /> } />
-          <Route path="/create-song" element={ <Authenticator component={ <CreateSongPage /> } /> } />
           <Route path="/vocab" element={ <Authenticator component={ <VocabListPage /> } /> } />
           <Route path="/vocab/quiz" element={ <Authenticator component={ <VocabQuizPage /> } /> } />
         </Routes>
