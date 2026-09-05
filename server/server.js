@@ -229,7 +229,7 @@ Have no line breaks. <x> is the value.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: prompt
     });
     const message = response.text || '';
@@ -265,7 +265,7 @@ Give just the translation, nothing else. Do not wrap in quotes or anything.`;
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: prompt
     });
     res.send(response.text);
@@ -365,11 +365,11 @@ Give just the breif meaning/interpretation of the lyric (1-3 sentences max), not
   try {
     const [resTranslation, resMeaning] = await Promise.all([
       ai.models.generateContent({
-        model: 'gemini-3.5-flash',
+        model: 'gemini-3.5-flash-lite',
         contents: promptTranslation
       }),
       ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: promptMeaning
       })
     ]);
@@ -397,7 +397,7 @@ Ex: if given "beautiful" and the language is Spanish, respond with something lik
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: prompt
     });
     res.send(response.text);
@@ -421,7 +421,7 @@ Be forgiving in your grading; don't be pedantic. Give them the point if they giv
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: prompt
     });
     const msg = (response.text || '').trim();
