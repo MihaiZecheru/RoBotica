@@ -25,11 +25,9 @@ fi
 # Extract video ID from URL if full URL is passed
 YOUTUBE_ID=$(echo "$INPUT_ID" | sed -E 's/.*(v=|youtu\.be\/|embed\/|\/v\/|\/e\/|watch\?v=|&v=)([a-zA-Z0-9_-]{11}).*/\2/')
 if [ ${#YOUTUBE_ID} -ne 11 ]; then
-  # Fallback extraction
   if [[ "$INPUT_ID" =~ ([a-zA-Z0-9_-]{11}) ]]; then
     YOUTUBE_ID="${BASH_REMATCH[1]}"
   else
-    echo "Warning: Could not automatically detect 11-char YouTube ID. Using raw input: $INPUT_ID"
     YOUTUBE_ID="$INPUT_ID"
   fi
 fi
@@ -83,37 +81,51 @@ TITLE="$3"
 ARTIST="$4"
 YEAR="$5"
 
-echo ""
-echo "Extracting YouTube metadata..."
-METADATA_JSON=$($YTDL_CMD --dump-json --skip-download "https://www.youtube.com/watch?v=$YOUTUBE_ID" 2>/dev/null || echo "{}")
+if [ -z "$TITLE" ] || [ -z "$ARTIST" ] || [ -z "$YEAR" ]; then
+  echo ""
+  echo "Extracting YouTube metadata..."
+  
+  AUTO_RAW_TITLE=$($YTDL_CMD --print "%(track,title)s" --skip-download "https://www.youtube.com/watch?v=$YOUTUBE_ID" 2>/dev/null | head -n 1 || true)
+  AUTO_RAW_ARTIST=$($YTDL_CMD --print "%(artist,creator,uploader)s" --skip-download "https://www.youtube.com/watch?v=$YOUTUBE_ID" 2>/dev/null | head -n 1 || true)
+  AUTO_RAW_DATE=$($YTDL_CMD --print "%(release_year,upload_date)s" --skip-download "https://www.youtube.com/watch?v=$YOUTUBE_ID" 2>/dev/null | head -n 1 || true)
+  AUTO_YEAR="${AUTO_RAW_DATE:0:4}"
 
-if [ -z "$TITLE" ]; then
-  AUTO_TITLE=$(node -e "try { const d = JSON.parse(process.argv[1]); console.log(d.track || d.title || ''); } catch(e){}" "$METADATA_JSON")
-  if [ -n "$AUTO_TITLE" ]; then
-    read -p "Song Title [$AUTO_TITLE]: " INPUT_TITLE
-    TITLE="${INPUT_TITLE:-$AUTO_TITLE}"
-  else
-    read -p "Enter Song Title: " TITLE
+  # Smart split if title contains "Artist - Title" format
+  SUGGESTED_TITLE="$AUTO_RAW_TITLE"
+  SUGGESTED_ARTIST="$AUTO_RAW_ARTIST"
+
+  if [[ "$AUTO_RAW_TITLE" == *" - "* ]]; then
+    SUGGESTED_ARTIST="${AUTO_RAW_TITLE%% - *}"
+    SUGGESTED_TITLE="${AUTO_RAW_TITLE#* - }"
+    # Clean up trailing (Official Video), [HQ], etc.
+    SUGGESTED_TITLE=$(echo "$SUGGESTED_TITLE" | sed -E 's/\s*[\(\[].*[\)\]]//g')
   fi
-fi
 
-if [ -z "$ARTIST" ]; then
-  AUTO_ARTIST=$(node -e "try { const d = JSON.parse(process.argv[1]); console.log(d.artist || d.uploader || d.channel || ''); } catch(e){}" "$METADATA_JSON")
-  if [ -n "$AUTO_ARTIST" ]; then
-    read -p "Song Artist [$AUTO_ARTIST]: " INPUT_ARTIST
-    ARTIST="${INPUT_ARTIST:-$AUTO_ARTIST}"
-  else
-    read -p "Enter Song Artist: " ARTIST
+  if [ -z "$TITLE" ]; then
+    if [ -n "$SUGGESTED_TITLE" ]; then
+      read -p "Song Title [$SUGGESTED_TITLE]: " INPUT_TITLE
+      TITLE="${INPUT_TITLE:-$SUGGESTED_TITLE}"
+    else
+      read -p "Enter Song Title: " TITLE
+    fi
   fi
-fi
 
-if [ -z "$YEAR" ]; then
-  AUTO_YEAR=$(node -e "try { const d = JSON.parse(process.argv[1]); console.log(d.release_year || (d.upload_date ? d.upload_date.slice(0,4) : '')); } catch(e){}" "$METADATA_JSON")
-  if [ -n "$AUTO_YEAR" ]; then
-    read -p "Release Year [$AUTO_YEAR]: " INPUT_YEAR
-    YEAR="${INPUT_YEAR:-$AUTO_YEAR}"
-  else
-    read -p "Release Year (optional, press Enter to skip): " YEAR
+  if [ -z "$ARTIST" ]; then
+    if [ -n "$SUGGESTED_ARTIST" ]; then
+      read -p "Song Artist [$SUGGESTED_ARTIST]: " INPUT_ARTIST
+      ARTIST="${INPUT_ARTIST:-$SUGGESTED_ARTIST}"
+    else
+      read -p "Enter Song Artist: " ARTIST
+    fi
+  fi
+
+  if [ -z "$YEAR" ]; then
+    if [ -n "$AUTO_YEAR" ]; then
+      read -p "Release Year [$AUTO_YEAR]: " INPUT_YEAR
+      YEAR="${INPUT_YEAR:-$AUTO_YEAR}"
+    else
+      read -p "Release Year (optional, press Enter to skip): " YEAR
+    fi
   fi
 fi
 
@@ -130,93 +142,13 @@ else
   echo "Warning: Audio file server/music/${YOUTUBE_ID}.mp3 was not created."
 fi
 
-# 7. Sourcing Synchronized Lyrics (LRCLIB)
+# 7. Sourcing Synchronized Lyrics & Database Registration
 echo ""
-echo "Fetching synchronized lyrics from LRCLIB for '$TITLE' by '$ARTIST'..."
-
-LYRICS_RESULT=$(node -e '
-const https = require("https");
-const track = process.argv[1];
-const artist = process.argv[2];
-
-function fetchLyrics(query) {
-  const url = "https://lrclib.net/api/" + query;
-  return new Promise((resolve) => {
-    https.get(url, { headers: { "User-Agent": "RoBotica/1.0" } }, (res) => {
-      let data = "";
-      res.on("data", chunk => data += chunk);
-      res.on("end", () => {
-        try {
-          const json = JSON.parse(data);
-          resolve(json);
-        } catch(e) {
-          resolve(null);
-        }
-      });
-    }).on("error", () => resolve(null));
-  });
-}
-
-(async () => {
-  const exact = await fetchLyrics("get?track_name=" + encodeURIComponent(track) + "&artist_name=" + encodeURIComponent(artist));
-  if (exact && exact.syncedLyrics) {
-    process.stdout.write(JSON.stringify({ type: "synced", lyrics: exact.syncedLyrics }));
-    return;
-  }
-  const search = await fetchLyrics("search?q=" + encodeURIComponent(track + " " + artist));
-  if (Array.isArray(search) && search.length > 0) {
-    const match = search.find(s => s.syncedLyrics) || search[0];
-    if (match.syncedLyrics) {
-      process.stdout.write(JSON.stringify({ type: "synced", lyrics: match.syncedLyrics }));
-      return;
-    }
-    if (match.plainLyrics) {
-      process.stdout.write(JSON.stringify({ type: "plain", lyrics: match.plainLyrics }));
-      return;
-    }
-  }
-  process.stdout.write(JSON.stringify({ type: "none", lyrics: "" }));
-})();
-' "$TITLE" "$ARTIST")
-
-LYRICS_TYPE=$(node -e "try { console.log(JSON.parse(process.argv[1]).type); } catch(e) { console.log('none'); }" "$LYRICS_RESULT")
-LYRICS_CONTENT=$(node -e "try { console.log(JSON.parse(process.argv[1]).lyrics); } catch(e) { console.log(''); }" "$LYRICS_RESULT")
-
-if [ "$LYRICS_TYPE" = "synced" ]; then
-  echo "Found time-synced lyrics (LRC format) on LRCLIB!"
-elif [ "$LYRICS_TYPE" = "plain" ]; then
-  echo "Found plain lyrics on LRCLIB (no sync timestamps)."
-else
-  echo "No lyrics found automatically on LRCLIB."
-fi
-
-# 8. Insert or Update Database
-echo ""
-echo "Adding song to database..."
-
-THUMBNAIL_URL="https://i.ytimg.com/vi/${YOUTUBE_ID}/hqdefault.jpg"
-IMAGE_URL="https://i.ytimg.com/vi/${YOUTUBE_ID}/maxresdefault.jpg"
-
-PAYLOAD=$(node -e '
-const payload = {
-  language: process.argv[1],
-  title: process.argv[2],
-  artist: process.argv[3],
-  year: process.argv[4] ? parseInt(process.argv[4], 10) : null,
-  lyrics: process.argv[5] || "",
-  thumbnail_url: process.argv[6],
-  image_url: process.argv[7],
-  youtube_video_id: process.argv[8]
-};
-process.stdout.write(JSON.stringify(payload));
-' "$LANGUAGE" "$TITLE" "$ARTIST" "$YEAR" "$LYRICS_CONTENT" "$THUMBNAIL_URL" "$IMAGE_URL" "$YOUTUBE_ID")
-
-node scripts/add_song_db.js "$PAYLOAD"
+node scripts/fetch_and_add_song.js "$LANGUAGE" "$TITLE" "$ARTIST" "$YEAR" "$YOUTUBE_ID"
 
 echo ""
 echo "=========================================================="
 echo " [Done] Song '$TITLE' by '$ARTIST' is ready!"
 echo " Audio: server/music/${YOUTUBE_ID}.mp3"
 echo " Stream: /api/stream/${YOUTUBE_ID}"
-echo " Lyrics: $LYRICS_TYPE"
 echo "=========================================================="

@@ -100,17 +100,29 @@ async function addSongToDatabase(songData) {
   console.log(`\x1b[32m[Success] Successfully added song to DB with ID: ${newId}\x1b[0m`);
 }
 
-// Parse input from JSON argument or CLI flags
-const inputArg = process.argv[2];
-if (!inputArg) {
-  console.error('Usage: node scripts/add_song_db.js \'<json_string>\'');
-  process.exit(1);
+// Parse input from JSON argument or stdin
+async function run() {
+  let input = process.argv[2];
+  if (!input || input === '-') {
+    try {
+      input = fs.readFileSync(0, 'utf-8');
+    } catch (e) {
+      input = null;
+    }
+  }
+
+  if (!input || !input.trim()) {
+    console.error('Usage: node scripts/add_song_db.js \'<json_string>\' OR pipe JSON via stdin');
+    process.exit(1);
+  }
+
+  try {
+    const songData = JSON.parse(input.trim());
+    await addSongToDatabase(songData);
+  } catch (e) {
+    console.error('\x1b[31m[Error] Invalid JSON provided:\x1b[0m', e.message);
+    process.exit(1);
+  }
 }
 
-try {
-  const songData = JSON.parse(inputArg);
-  addSongToDatabase(songData);
-} catch (e) {
-  console.error('\x1b[31m[Error] Invalid JSON provided:\x1b[0m', e.message);
-  process.exit(1);
-}
+run();

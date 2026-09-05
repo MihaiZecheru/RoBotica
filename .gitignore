@@ -28,3 +28,8 @@ server/google-service-credentials.json
 server/node_modules
 
 keep-alive.log
+
+# downloaded music
+/music
+/server/music
+
