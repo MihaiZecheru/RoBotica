@@ -22,7 +22,7 @@ interface SyncedLyricLine {
 
 function parseLRC(lrcText: string): SyncedLyricLine[] {
   if (!lrcText) return [];
-  const lines = lrcText.split('\n');
+  const lines = lrcText.replace(/\r/g, '').split('\n');
   const parsed: SyncedLyricLine[] = [];
   const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
 
@@ -95,7 +95,8 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
     setLyricsData({ synced: [], plain: '', loading: true });
 
     // 1. First check if song.lyrics already contains LRC timestamps
-    const dbParsed = parseLRC(song.lyrics);
+    const cleanDbLyrics = (song.lyrics || '').replace(/\r/g, '');
+    const dbParsed = parseLRC(cleanDbLyrics);
     if (dbParsed.length > 0) {
       setLyricsData({ synced: dbParsed, plain: '', loading: false });
       return;
@@ -109,21 +110,21 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
       .then(res => res.json())
       .then(data => {
         if (data.syncedLyrics) {
-          const parsed = parseLRC(data.syncedLyrics);
+          const parsed = parseLRC(data.syncedLyrics.replace(/\r/g, ''));
           if (parsed.length > 0) {
             setLyricsData({ synced: parsed, plain: '', loading: false });
             return;
           }
         }
         if (data.plainLyrics) {
-          setLyricsData({ synced: [], plain: data.plainLyrics, loading: false });
+          setLyricsData({ synced: [], plain: data.plainLyrics.replace(/\r/g, ''), loading: false });
         } else {
-          setLyricsData({ synced: [], plain: song.lyrics, loading: false });
+          setLyricsData({ synced: [], plain: cleanDbLyrics, loading: false });
         }
       })
       .catch(err => {
         console.warn("Failed to fetch synced lyrics from API, using DB lyrics:", err);
-        setLyricsData({ synced: [], plain: song.lyrics, loading: false });
+        setLyricsData({ synced: [], plain: cleanDbLyrics, loading: false });
       });
   }, [song]);
 
@@ -317,7 +318,7 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
                         </div>
 
                         <div className="lyric-line-actions" onClick={(e) => e.stopPropagation()}>
-                          <ClickableLyric language={song.language} lyric={line.text} song={song} onTranslate={pausePlayback} />
+                          <ClickableLyric language={song.language} lyric={line.text} song={song} onTranslate={pausePlayback} full_lyrics={(song.lyrics || '').replace(/\r/g, '')} />
                         </div>
                       </div>
                     );
@@ -326,14 +327,14 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
               ) : (
                 /* Plain Lyrics Fallback */
                 <div className="plain-lyrics-container">
-                  {song.lyrics.trim().split("\n").map((lyric, index) => (
+                  {(lyricsData.plain || song.lyrics || '').replace(/\r/g, '').trim().split("\n").map((lyric, index) => (
                     <div key={index} style={{ marginBottom: '6px' }}>
                       {lyric.split(" ").map((word, wIdx) => (
                         <ClickableWord key={wIdx} word={word} language={song.language} onTranslate={pausePlayback} />
                       ))}
                       {lyric === "" && <br />}
                       {!lyric.startsWith("[") && !lyric.endsWith("]") && lyric !== "" && (
-                        <ClickableLyric language={song.language} lyric={lyric} song={song} onTranslate={pausePlayback} />
+                        <ClickableLyric language={song.language} lyric={lyric} song={song} onTranslate={pausePlayback} full_lyrics={(song.lyrics || '').replace(/\r/g, '')} />
                       )}
                     </div>
                   ))}

@@ -54,11 +54,11 @@ async function getLyrics(track, art) {
   const exact = await fetchJson(`https://lrclib.net/api/get?track_name=${encodeURIComponent(track)}&artist_name=${encodeURIComponent(art)}`);
   if (exact && exact.syncedLyrics) {
     console.log('\x1b[32mFound time-synced lyrics (LRC format) on LRCLIB!\x1b[0m');
-    return { type: 'synced', lyrics: exact.syncedLyrics };
+    return { type: 'synced', lyrics: exact.syncedLyrics.replace(/\r/g, '') };
   }
   if (exact && exact.plainLyrics) {
     console.log('\x1b[33mFound plain lyrics on LRCLIB (exact match).\x1b[0m');
-    return { type: 'plain', lyrics: exact.plainLyrics };
+    return { type: 'plain', lyrics: exact.plainLyrics.replace(/\r/g, '') };
   }
 
   // 2. Fuzzy search
@@ -67,12 +67,12 @@ async function getLyrics(track, art) {
     const syncedMatch = search.find(s => s.syncedLyrics);
     if (syncedMatch) {
       console.log('\x1b[32mFound time-synced lyrics (LRC format) via search!\x1b[0m');
-      return { type: 'synced', lyrics: syncedMatch.syncedLyrics };
+      return { type: 'synced', lyrics: syncedMatch.syncedLyrics.replace(/\r/g, '') };
     }
     const plainMatch = search.find(s => s.plainLyrics);
     if (plainMatch) {
       console.log('\x1b[33mFound plain lyrics via search.\x1b[0m');
-      return { type: 'plain', lyrics: plainMatch.plainLyrics };
+      return { type: 'plain', lyrics: plainMatch.plainLyrics.replace(/\r/g, '') };
     }
   }
 
@@ -82,6 +82,7 @@ async function getLyrics(track, art) {
 
 async function main() {
   const { type: lyricsType, lyrics } = await getLyrics(title, artist);
+  const cleanLyrics = lyrics ? lyrics.replace(/\r/g, '') : '';
 
   if (!supabaseKey) {
     console.error('\x1b[31m[Error] Missing Supabase API Key. Please set SUPABASE_SERVICE_ROLE_KEY or REACT_APP_SUPABASE_ANON_KEY in your .env file.\x1b[0m');
@@ -116,7 +117,7 @@ async function main() {
         title,
         artist,
         year,
-        lyrics,
+        lyrics: cleanLyrics,
         thumbnail_url,
         image_url,
         youtube_video_id
@@ -139,7 +140,7 @@ async function main() {
       title,
       artist,
       year,
-      lyrics,
+      lyrics: cleanLyrics,
       thumbnail_url,
       image_url,
       youtube_video_id

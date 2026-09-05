@@ -31,7 +31,13 @@ if (fs.existsSync(defaultCredentialsPath)) {
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Larger payload limit due to audio data
-app.use(express.static(path.join(__dirname, build_name)));
+app.use(express.static(path.join(__dirname, build_name), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    }
+  }
+}));
 
 const language_codes = {
   "Spanish": "es-US",
@@ -207,7 +213,7 @@ ${language === 'Spanish' ? 'Use mexican spanish' : ''}
 
 Then give two example sentences using the word "${word}" in ${language}, 
 and an English translation for each. 
-Be more literal in your translations (ex: 'Bună  ziua' is 'good day' not 'hello'), but not too literal (ex in spanish: 'humor' is 'mood', not 'humor'). 
+Be literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello'), but not too literal where the English translation doesn't make sense.
 If the word has multiple meanings, use one meaning for the first sentence, and another meaning for the second sentence.
 
 Response format is strictly the following, you must use the format exactly as is:
@@ -253,7 +259,7 @@ app.post('/api/bot/translate-message', async (req, res) => {
   const { message, language } = req.body;
   const prompt = `Translate the message "${message}" from ${language} to English. 
 ${language === 'Spanish' ? 'Use mexican spanish' : ''} 
-Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
+Be literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello'), but not too literal where the English translation doesn't make sense.
 If necessary, specify in parentheses when slang is used (ex: mention that 'que pedo' is not actually 'what fart' in spanish).
 Give just the translation, nothing else. Do not wrap in quotes or anything.`;
 
@@ -336,21 +342,30 @@ You MUST contain the word 'Title:' and 'Story:' in your response.`;
  * Endpoint: /api/bot/lyric-translation
  */
 app.post('/api/bot/lyric-translation', async (req, res) => {
-  const { lyric, language, song } = req.body;
+  const { lyric, language, song, full_lyrics } = req.body;
+  const cleanLyric = (lyric || '').replace(/\r/g, '');
+  const cleanFullLyrics = (full_lyrics || '').replace(/\r/g, '');
   
-  const promptTranslation = `Translate the lyric "${lyric}" from the song ${song.title} by ${song.artist} from ${language} to English.
+  const promptTranslation = `Translate the lyric "${cleanLyric}" from the song ${song.title} by ${song.artist} from ${language} to English.
 ${language === 'Spanish' ? 'Use mexican spanish' : ''}
-Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
+Be literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello'), but not too literal where the English translation doesn't make sense.
 Give just the translation, nothing else. Do not wrap in quotes or anything.`;
 
-  const promptMeaning = `Generate a short meaning of the lyric "${lyric}" from the song ${song.title} by ${song.artist}, which is in ${language}.
+  const promptMeaning = `Generate a short meaning of the lyric "${cleanLyric}" from the song ${song.title} by ${song.artist}, which is in ${language}. Full song lyrics provided below:
+
+[START SONG LYRICS]
+
+${cleanFullLyrics}
+
+[END SONG LYRICS]
+
 The meaning that you generate must be in English.
-Give just the breif meaning/interpretation of the lyric, nothing else. Do not wrap in quotes or anything.`;
+Give just the breif meaning/interpretation of the lyric (1-3 sentences max), nothing else. Do not wrap in quotes or anything.`;
 
   try {
     const [resTranslation, resMeaning] = await Promise.all([
       ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.5-flash',
         contents: promptTranslation
       }),
       ai.models.generateContent({
@@ -375,7 +390,7 @@ app.post('/api/bot/translate-english', async (req, res) => {
   const { message, language } = req.body;
   const prompt = `Translate the message "${message}" from English to ${language}.
 ${language === 'Spanish' ? 'Use mexican spanish' : ''} 
-Be more literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello').
+Be literal in your translations (ex: 'Bună ziua' is 'good day' not 'hello'), but not too literal where the English translation doesn't make sense.
 Give just the translations separated by commas, nothing else. Do not wrap in quotes or anything.
 Provide multiple translations if possible.
 Ex: if given "beautiful" and the language is Spanish, respond with something like "bonito, hermos, lindo" etc.`;
@@ -454,8 +469,8 @@ app.get('/api/lyrics', async (req, res) => {
     if (resp.ok) {
       const data = await resp.json();
       return res.json({
-        syncedLyrics: data.syncedLyrics || null,
-        plainLyrics: data.plainLyrics || null
+        syncedLyrics: data.syncedLyrics ? data.syncedLyrics.replace(/\r/g, '') : null,
+        plainLyrics: data.plainLyrics ? data.plainLyrics.replace(/\r/g, '') : null
       });
     }
 
@@ -470,8 +485,8 @@ app.get('/api/lyrics', async (req, res) => {
       if (Array.isArray(results) && results.length > 0) {
         const match = results[0];
         return res.json({
-          syncedLyrics: match.syncedLyrics || null,
-          plainLyrics: match.plainLyrics || null
+          syncedLyrics: match.syncedLyrics ? match.syncedLyrics.replace(/\r/g, '') : null,
+          plainLyrics: match.plainLyrics ? match.plainLyrics.replace(/\r/g, '') : null
         });
       }
     }
@@ -683,6 +698,7 @@ app.post('/api/music/download', async (req, res) => {
 
 // Serve the React app
 app.get('*', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.sendFile(path.join(__dirname, build_name, 'index.html'));
 });
 

@@ -19,10 +19,11 @@ interface Props {
    * The song the lyric belongs to.
    */
   song: TSong;
+	full_lyrics: string;
   onTranslate?: () => void;
 }
 
-const ClickableLyric = ({ language, lyric, song, onTranslate }: Props) => {
+const ClickableLyric = ({ language, lyric, song, onTranslate, full_lyrics }: Props) => {
   const showInfoModal = useInfoModal();  
   const [canBeClicked, setCanBeClicked] = useState(true);
 
@@ -39,12 +40,12 @@ const ClickableLyric = ({ language, lyric, song, onTranslate }: Props) => {
       = await Database.GetLyricTranslationAndMeaning(lyric, language, song.id);
 
     if (translationAndMeaning === null) {
-      translationAndMeaning = await Bot.GenerateLyricTranslationAndMeaning(lyric, language, song);
+      translationAndMeaning = await Bot.GenerateLyricTranslationAndMeaning(lyric, language, song, full_lyrics);
       Database.AddLyricTranslation(lyric, language, song.id, translationAndMeaning!.translation, translationAndMeaning!.meaning);
     }
 
     const showResult = () => {
-      showInfoModal(`${language} Lyric Translation`, `${lyric}\n\n${translationAndMeaning?.translation}\n\n${translationAndMeaning?.meaning}`);
+      showInfoModal(`${language} Lyric Translation`, `${lyric}\n\n${translationAndMeaning?.translation}\n\nMeaning: ${translationAndMeaning?.meaning}`);
       setCanBeClicked(true);
     };
 

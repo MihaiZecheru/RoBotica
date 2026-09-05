@@ -52,6 +52,8 @@ async function addSongToDatabase(songData) {
     console.error('\x1b[31m[Error] Failed to query existing songs:\x1b[0m', checkError.message);
   }
 
+  const cleanLyrics = lyrics ? lyrics.replace(/\r/g, '') : '';
+
   if (existingSongs && existingSongs.length > 0) {
     console.log(`\x1b[33mSong already exists in DB (ID: ${existingSongs[0].id}). Updating lyrics & metadata...\x1b[0m`);
     const { error: updateError } = await supabase
@@ -61,7 +63,7 @@ async function addSongToDatabase(songData) {
         title,
         artist,
         year: year ? parseInt(year, 10) : null,
-        lyrics: lyrics || '',
+        lyrics: cleanLyrics,
         thumbnail_url: thumbnail_url || `https://i.ytimg.com/vi/${youtube_video_id}/hqdefault.jpg`,
         image_url: image_url || `https://i.ytimg.com/vi/${youtube_video_id}/maxresdefault.jpg`,
         youtube_video_id
@@ -84,7 +86,7 @@ async function addSongToDatabase(songData) {
       title,
       artist,
       year: year ? parseInt(year, 10) : null,
-      lyrics: lyrics || '',
+      lyrics: cleanLyrics,
       thumbnail_url: thumbnail_url || `https://i.ytimg.com/vi/${youtube_video_id}/hqdefault.jpg`,
       image_url: image_url || `https://i.ytimg.com/vi/${youtube_video_id}/maxresdefault.jpg`,
       youtube_video_id

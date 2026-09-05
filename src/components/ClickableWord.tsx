@@ -89,9 +89,9 @@ const ClickableWord = ({ word, language, onTranslate }: Props) => {
         showInfoModal(
           `${language} Translation`,
           `"${word_cleaned}" means "${response!.translation}".\n\n
-          ${response!.example_sentence1}\n
+          EX: ${response!.example_sentence1}\n
           (${response!.example_sentence1_translation})\n\n
-          ${response!.example_sentence2}\n
+          EX: ${response!.example_sentence2}\n
           (${response!.example_sentence2_translation})`,
           <TextToSpeech
             text={`<speak>${word_cleaned}.<break time="1s" />${response!.example_sentence1}<break time="1s" />${response!.example_sentence2}</speak>`}

@@ -294,7 +294,10 @@ export default class Database {
       throw error;
     }
 
-    return data as TSong[];
+    return (data || []).map((s: any) => ({
+      ...s,
+      lyrics: s.lyrics ? s.lyrics.replace(/\r/g, '') : ''
+    })) as TSong[];
   }
 
   public static async AddSong(
@@ -302,6 +305,7 @@ export default class Database {
     lyrics: string, thumbnail_url: string, image_url: string,
     youtube_video_id: string): Promise<{ id: SongID, isNew: boolean }> {
     let existingId: SongID | null = null;
+    const cleanLyrics = (lyrics || '').replace(/\r/g, '');
 
     // 1. Check if song exists by youtube_video_id
     if (youtube_video_id) {
@@ -339,7 +343,7 @@ export default class Database {
           title,
           artist,
           year: year ? parseInt(year.toString(), 10) : null,
-          lyrics: lyrics || '',
+          lyrics: cleanLyrics,
           thumbnail_url: thumbnail_url || `https://i.ytimg.com/vi/${youtube_video_id}/hqdefault.jpg`,
           image_url: image_url || `https://i.ytimg.com/vi/${youtube_video_id}/maxresdefault.jpg`,
           youtube_video_id
@@ -362,7 +366,7 @@ export default class Database {
         title,
         artist,
         year: year ? parseInt(year.toString(), 10) : null,
-        lyrics: lyrics || '',
+        lyrics: cleanLyrics,
         thumbnail_url: thumbnail_url || `https://i.ytimg.com/vi/${youtube_video_id}/hqdefault.jpg`,
         image_url: image_url || `https://i.ytimg.com/vi/${youtube_video_id}/maxresdefault.jpg`,
         youtube_video_id
@@ -407,7 +411,7 @@ export default class Database {
     if (data.length === 0) return null;
     return {
       translation: data[0].translation,
-      meaning: data[0].meaning
+      meaning: data[0].meaning,
     };
   }
 

@@ -196,13 +196,15 @@ export default class Bot {
    * @param lyric The lyric to translate into `language`. One line from the given `song`.
    * @returns The translation and meaning of the lyric.
    */
-  public static async GenerateLyricTranslationAndMeaning(lyric: string, language: TLanguage, song: TSong): Promise<{ translation: string, meaning: string }> {
+  public static async GenerateLyricTranslationAndMeaning(lyric: string, language: TLanguage, song: TSong, full_lyrics: string): Promise<{ translation: string, meaning: string }> {
+    const cleanLyric = (lyric || '').replace(/\r/g, '');
+    const cleanFullLyrics = (full_lyrics || '').replace(/\r/g, '');
     const response = await fetch(getApiUrl('/api/bot/lyric-translation'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ lyric, language, song }),
+      body: JSON.stringify({ lyric: cleanLyric, language, song, full_lyrics: cleanFullLyrics }),
     });
 
     if (!response.ok) {
