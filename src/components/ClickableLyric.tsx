@@ -49,7 +49,7 @@ const ClickableLyric = ({ language, lyric, song, onTranslate, onCloseModal, full
       const showResult = () => {
         showInfoModal(
           `${language} Lyric Translation`,
-          `${lyric}\n\n${translationAndMeaning?.translation}\n\n${translationAndMeaning?.meaning}`,
+          `${lyric}\n\n${translationAndMeaning?.translation}\n\n\n${translationAndMeaning?.meaning}`,
           undefined,
           onCloseModal
         );

@@ -1,15 +1,21 @@
 import { Button, Paper, Stack } from "@mui/material";
 import BotMessage from "./BotMessage";
 import UserMessage from "./UserMessage";
-import { ConversationID } from "../database/ID";
+import { ConversationID, MessageID } from "../database/ID";
 import { useNavigate } from "react-router-dom";
 import TLanguage from "../database/TLanguage";
+import { TGrammarCheckData } from "../database/TGrammarAndSpellcheck";
 
 interface Props {
   conversation_id: ConversationID;
   last_bot_msg: string;
   last_user_msg: string;
-  all_messages: Array<{ content: string, is_bot: boolean }>;
+  all_messages: Array<{
+    id?: MessageID;
+    content: string;
+    is_bot: boolean;
+    grammar_check?: TGrammarCheckData | null;
+  }>;
   avatar_url?: string;
   deleteChat: () => void;
   language: TLanguage;

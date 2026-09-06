@@ -1,8 +1,9 @@
-import { ConversationID, SongID, StoryID, UserID } from "./ID";
+import { ConversationID, MessageID, SongID, StoryID, UserID } from "./ID";
 import supabase from "./supabase-config";
 import TTranslationAndExamples from "./TTranslationAndExamples";
 import TLanguage from "./TLanguage";
 import TMessage from "./TMessage";
+import TGrammarAndSpellcheck, { TGrammarCheckData } from "./TGrammarAndSpellcheck";
 import TStory from "./TStory";
 import { TUserSettings } from "./GetUser";
 import TSong from "./TSong";
@@ -29,6 +30,54 @@ export default class Database {
     }
 
     return data[0];
+  }
+
+  /**
+   * Save a grammar and spelling check result for a message.
+   * 
+   * @param message_id The ID of the message
+   * @param mistake_count The number of mistakes found
+   * @param modal_message The formatted comparison message to display in the modal, or null if no mistakes
+   */
+  public static async AddGrammarAndSpellcheck(message_id: MessageID, mistake_count: number, modal_message: string | null): Promise<TGrammarAndSpellcheck> {
+    const { data, error } = await supabase
+      .from('GrammarAndSpellchecks')
+      .insert([{
+        message_id,
+        mistake_count,
+        modal_message
+      }])
+      .select('*');
+
+    if (error) {
+      console.error("Error adding grammar and spelling check:", error);
+      throw error;
+    }
+
+    return data[0];
+  }
+
+  /**
+   * Get an existing grammar and spelling check for a message if available.
+   * 
+   * @param message_id The ID of the message
+   */
+  public static async GetGrammarAndSpellcheck(message_id: MessageID): Promise<TGrammarCheckData | null> {
+    const { data, error } = await supabase
+      .from('GrammarAndSpellchecks')
+      .select('mistake_count, modal_message')
+      .eq('message_id', message_id);
+
+    if (error) {
+      console.error("Error getting grammar and spelling check:", error);
+      return null;
+    }
+
+    if (!data || data.length === 0) return null;
+    return {
+      mistake_count: data[0].mistake_count,
+      modal_message: data[0].modal_message
+    };
   }
 
   /**
@@ -115,41 +164,79 @@ export default class Database {
     last_bot_msg: string,
     last_user_msg: string,
     all_messages: Array<{
+      id?: MessageID;
       content: string;
       is_bot: boolean;
+      grammar_check?: TGrammarCheckData | null;
     }>
   }> | null> {
-    const { data, error } = await supabase
+    const primaryResult = await supabase
       .from('Conversations')
       .select(`
         id,
         user_id,
         created_at,
-        Messages(id, message_content, is_bot, created_at)
+        Messages(id, message_content, is_bot, created_at, GrammarAndSpellchecks(mistake_count, modal_message))
       `)
       .eq('user_id', user_id)
       .order('created_at', { ascending: false }); // newest first
 
-    if (error) {
-      console.error("Error fetching messages:", error.message);
+    let conversationsData: any[] | null = primaryResult.data as any;
+    let queryError = primaryResult.error;
+
+    // If joined query fails (e.g. relationship pending in Supabase), fallback without GrammarAndSpellchecks
+    if (queryError) {
+      console.warn("Retrying GetAllUserConversations without GrammarAndSpellchecks join:", queryError.message);
+      const fallback = await supabase
+        .from('Conversations')
+        .select(`
+          id,
+          user_id,
+          created_at,
+          Messages(id, message_content, is_bot, created_at)
+        `)
+        .eq('user_id', user_id)
+        .order('created_at', { ascending: false });
+      
+      conversationsData = fallback.data as any;
+      queryError = fallback.error;
+    }
+
+    if (queryError) {
+      console.error("Error fetching messages:", queryError.message);
       return null;
     }
 
-    if (!data) return null;
+    if (!conversationsData) return null;
 
-    return data.map((conversation: any) => {
+    return conversationsData.map((conversation: any) => {
       const msgs = conversation.Messages.sort((a: any, b: any) => {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime(); // oldest to newest
       });
 
       return {
         id: conversation.id as ConversationID,
-        last_bot_msg: msgs[msgs.length - 1].message_content,
-        last_user_msg: msgs[msgs.length - 2].message_content,
+        last_bot_msg: msgs[msgs.length - 1]?.message_content || '',
+        last_user_msg: msgs[msgs.length - 2]?.message_content || '',
         all_messages: msgs.map((msg: any) => {
+          let grammar_check: TGrammarCheckData | null = null;
+          if (msg.GrammarAndSpellchecks) {
+            const check = Array.isArray(msg.GrammarAndSpellchecks)
+              ? msg.GrammarAndSpellchecks[0]
+              : msg.GrammarAndSpellchecks;
+            if (check) {
+              grammar_check = {
+                mistake_count: check.mistake_count,
+                modal_message: check.modal_message
+              };
+            }
+          }
+
           return {
+            id: msg.id as MessageID,
             content: msg.message_content,
-            is_bot: msg.is_bot
+            is_bot: msg.is_bot,
+            grammar_check
           };
         })
       }

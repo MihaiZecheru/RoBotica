@@ -2,13 +2,14 @@ import { Avatar, Button, Input, Paper, Tooltip } from '@mui/material';
 import '../styles/chat-page.css';
 import { useEffect, useRef, useState } from 'react';
 import SendButton from './SendButton';
-import TLanguage from '../database/TLanguage';
 import BotMessage from './BotMessage';
 import GetStartingGreeting from '../functions/GetStartingGreeting';
 import Database from '../database/Database';
 import UserMessage from './UserMessage';
 import { AuthenticatedComponentDefaultProps } from './base/Authenticator';
-import { ConversationID } from '../database/ID';
+import { ConversationID, MessageID } from '../database/ID';
+import { TGrammarCheckData } from '../database/TGrammarAndSpellcheck';
+import TMessage from '../database/TMessage';
 import BotTyping from './BotTyping';
 import Bot from '../functions/Bot';
 import { useNavigate } from 'react-router-dom';
@@ -16,18 +17,38 @@ import isMobile from '../functions/isMobile';
 import SpeechToTextButton from './SpeechToTextButton';
 import WordSearchModal from './WordSearchModal';
 
+interface ChatPageMessage {
+  id?: MessageID;
+  content: string;
+  is_bot: boolean;
+  grammar_check?: TGrammarCheckData | null;
+}
+
 const MINIMUM_BOT_TYPING_TIME: number = 2000; // ms
 
 const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) => {
   const navigate = useNavigate();
-  const starting_message = { content: GetStartingGreeting(user_settings?.language || 'Romanian'), is_bot: true };
+  const starting_message: ChatPageMessage = { content: GetStartingGreeting(user_settings?.language || 'Romanian'), is_bot: true };
   const chatInputRef = useRef<HTMLInputElement>(null);
   const chatMessageContainer = useRef<HTMLDivElement>(null);
   const [conversation_id, setConversationID] = useState<ConversationID | null>(null);
-  const [messages, setMessages] = useState<Array<{ content: string, is_bot: boolean }>>([starting_message]);
+  const [messages, setMessages] = useState<Array<ChatPageMessage>>([starting_message]);
+  const checkingMessageIds = useRef<Set<string>>(new Set());
   const [botIstyping, setBotIsTyping] = useState<boolean>(false);
   const [inputDisabled, setInputDisabled] = useState<boolean>(false);
   const [wordSearchModalIsOpen, setWordSearchModalIsOpen] = useState<boolean>(false);
+  const prevWordSearchModalIsOpen = useRef(wordSearchModalIsOpen);
+
+  const focusChatInput = () => {
+    setTimeout(() => chatInputRef.current?.focus(), 0);
+  };
+
+  useEffect(() => {
+    if (prevWordSearchModalIsOpen.current && !wordSearchModalIsOpen) {
+      focusChatInput();
+    }
+    prevWordSearchModalIsOpen.current = wordSearchModalIsOpen;
+  }, [wordSearchModalIsOpen]);
 
   // Used for when a message is sent during a new conversation
   // The user will not have a conversation ID until the first message is sent,
@@ -43,7 +64,7 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
   }, [messages, botIstyping]);
 
   useEffect(() => {
-    setTimeout(() => chatInputRef.current?.focus(), 0);
+    focusChatInput();
 
     // If the page was refreshed, the conversation_id will be in local storage
     if (conversation_id === null && sessionStorage.getItem('conversation_id') && sessionStorage.getItem('messages')) {
@@ -56,15 +77,56 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
     }
   }, [conversation_id]);
 
+  useEffect(() => {
+    const currentLanguage = user_settings?.language || 'Romanian';
+    messages.forEach((msg) => {
+      const messageId = msg.id;
+      if (!msg.is_bot && messageId && msg.grammar_check === undefined) {
+        if (checkingMessageIds.current.has(messageId)) return;
+        checkingMessageIds.current.add(messageId);
+
+        Database.GetGrammarAndSpellcheck(messageId).then(async (existingCheck) => {
+          if (existingCheck) {
+            setMessages((prev) => {
+              const updated = prev.map((m) => (m.id === messageId ? { ...m, grammar_check: existingCheck } : m));
+              sessionStorage.setItem('messages', JSON.stringify(updated));
+              return updated;
+            });
+          } else {
+            // Not in database: generate, save, and display
+            try {
+              const { mistake_count, corrected_message } = await Bot.PerformGrammarAndSpellingCheck(msg.content, currentLanguage);
+              let modal_message: string | null = null;
+              if (mistake_count > 0) {
+                const s = mistake_count > 1 ? 's' : '';
+                modal_message = `Your message contains ${mistake_count} mistake${s}.\n\n\nOriginal: ${msg.content}\n\nCorrected: ${corrected_message}`;
+              }
+              await Database.AddGrammarAndSpellcheck(messageId, mistake_count, modal_message);
+              const grammar_check: TGrammarCheckData = { mistake_count, modal_message };
+              setMessages((prev) => {
+                const updated = prev.map((m) => (m.id === messageId ? { ...m, grammar_check } : m));
+                sessionStorage.setItem('messages', JSON.stringify(updated));
+                return updated;
+              });
+            } catch (err) {
+              console.error("Error generating missing grammar check:", err);
+            }
+          }
+        });
+      }
+    });
+  }, [messages, user_settings?.language]);
+
   const send_message = () => {
     const msg = chatInputRef.current!.value;
     chatInputRef.current!.value = '';
     
     if (msg === '') return;
     setInputDisabled(true);
-    const new_messages = [...messages, { content: msg, is_bot: false }];
-    setMessages(new_messages);
-    sessionStorage.setItem('messages', JSON.stringify(new_messages));
+    const user_msg: ChatPageMessage = { content: msg, is_bot: false };
+    const current_messages = [...messages, user_msg];
+    setMessages(current_messages);
+    sessionStorage.setItem('messages', JSON.stringify(current_messages));
 
     // Timestamp making sure the bot is typing for at least 500ms
     const start_time = Date.now();
@@ -72,18 +134,52 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
       setBotIsTyping(true);
     }, 250);
     
-    if (conversation_id === null) {
-      Database.CreateConversation().then((id: ConversationID) => {
+    let addMessagePromise: Promise<TMessage>;
+    if (conversation_id === null && _conversation_id === null) {
+      addMessagePromise = Database.CreateConversation().then((id: ConversationID) => {
         setConversationID(id);
         sessionStorage.setItem('conversation_id', id);
         _conversation_id = id;
-        Database.AddMessageToConversation(msg, id, false);
+        return Database.AddMessageToConversation(msg, id, false);
       });
     } else {
-      Database.AddMessageToConversation(msg, conversation_id!, false);
+      addMessagePromise = Database.AddMessageToConversation(msg, conversation_id || _conversation_id!, false);
     }
 
-    Bot.GetBotResponseToMessage(msg, user_settings?.language || 'Romanian', user_settings?.level || 'Beginner', user_settings?.gender || 'Man', messages).then(async (response: string) => {
+    const currentLanguage = user_settings?.language || 'Romanian';
+
+    // Perform grammar check in the background
+    addMessagePromise.then(async (addedMessage) => {
+      user_msg.id = addedMessage.id;
+      try {
+        const { mistake_count, corrected_message } = await Bot.PerformGrammarAndSpellingCheck(msg, currentLanguage);
+        let modal_message: string | null = null;
+        if (mistake_count > 0) {
+          const s = mistake_count > 1 ? 's' : '';
+          modal_message = `Your message contains ${mistake_count} mistake${s}.\n\n\nOriginal: ${msg}\n\nCorrected: ${corrected_message}`;
+        }
+        await Database.AddGrammarAndSpellcheck(addedMessage.id, mistake_count, modal_message);
+        const grammar_check: TGrammarCheckData = { mistake_count, modal_message };
+        user_msg.grammar_check = grammar_check;
+
+        setMessages((prev) => {
+          const updated = prev.map((m) => {
+            if (m === user_msg || (m.id && m.id === addedMessage.id)) {
+              return { ...m, id: addedMessage.id, grammar_check };
+            }
+            return m;
+          });
+          sessionStorage.setItem('messages', JSON.stringify(updated));
+          return updated;
+        });
+      } catch (err) {
+        console.error("Background grammar check error:", err);
+      }
+    }).catch((err) => {
+      console.error("Failed to add message to conversation:", err);
+    });
+
+    Bot.GetBotResponseToMessage(msg, currentLanguage, user_settings?.level || 'Beginner', user_settings?.gender || 'Man', messages).then(async (response: string) => {
       const end_time = Date.now();
       const time_diff = end_time - start_time;
       if (time_diff < MINIMUM_BOT_TYPING_TIME) {
@@ -91,14 +187,24 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
       }
       
       setBotIsTyping(false);
-      setMessages([...new_messages, { content: response, is_bot: true }]);
-      sessionStorage.setItem('messages', JSON.stringify([...new_messages, { content: response, is_bot: true }]));
+      const bot_msg: ChatPageMessage = { content: response, is_bot: true };
+      setMessages((prev) => {
+        const updated = [...prev, bot_msg];
+        sessionStorage.setItem('messages', JSON.stringify(updated));
+        return updated;
+      });
       setInputDisabled(false);
       setTimeout(() => chatInputRef.current?.focus(), 0);
-      Database.AddMessageToConversation(
-        response,
-        conversation_id === null ? _conversation_id! : conversation_id,
-        true);
+      const targetConvId = conversation_id === null ? _conversation_id : conversation_id;
+      if (targetConvId) {
+        Database.AddMessageToConversation(
+          response,
+          targetConvId,
+          true
+        ).then((addedBotMsg) => {
+          bot_msg.id = addedBotMsg.id;
+        });
+      }
     });
   };
 
@@ -126,16 +232,31 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
 
   return (
     <div className="chat-page" onKeyDown={onKeyDown} tabIndex={0}>
-      { user_settings?.language && <WordSearchModal language={user_settings?.language} isOpen={wordSearchModalIsOpen} setIsOpen={setWordSearchModalIsOpen} />}
+      { user_settings?.language && (
+        <WordSearchModal
+          language={user_settings?.language}
+          isOpen={wordSearchModalIsOpen}
+          setIsOpen={setWordSearchModalIsOpen}
+          onClose={focusChatInput}
+        />
+      )}
       <Paper elevation={3} className="chat-window" sx={{ borderRadius: isMobile() ? '0' : '1rem', position: 'relative' }} >
         <div className='chat-input-large-container'>
           <div className='chat-messages-container' ref={chatMessageContainer}>
             {
-              messages.map((message: { content: string, is_bot: boolean }, index: number) => {
+              messages.map((message: ChatPageMessage, index: number) => {
                 if (message.is_bot) {
                   return <BotMessage key={index} content={message.content} language={user_settings?.language || 'Romanian'} />;
                 } else {
-                  return <UserMessage key={index} content={message.content} language={user_settings?.language || 'Romanian'} avatar_url={user?.user_metadata.avatar_url} />;
+                  return (
+                    <UserMessage
+                      key={index}
+                      content={message.content}
+                      language={user_settings?.language || 'Romanian'}
+                      avatar_url={user?.user_metadata.avatar_url}
+                      grammar_check={message.grammar_check}
+                    />
+                  );
                 }
               })
             }

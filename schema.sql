@@ -72,3 +72,10 @@ CREATE TABLE public."WordTranslationAndExamples" (
     example_sentence1_translation text NOT NULL,
     example_sentence2_translation text NOT NULL
 );
+CREATE TABLE public."GrammarAndSpellchecks" (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    message_id uuid NOT NULL REFERENCES public."Messages"(id) ON DELETE CASCADE,
+    mistake_count integer NOT NULL,
+    modal_message text
+);
+

@@ -4,7 +4,7 @@ type Branded<T, B> = T & Brand<B>;
 
 // ----------------------------------------
 
-type ID = Branded<`${string}-${string}-${string}-${string}`, "ID">;
+type ID = `${string}-${string}-${string}-${string}`;
 export type UserID = Branded<ID, "UserID">;
 
 export type ConversationID = Branded<ID, "ConversationID">;

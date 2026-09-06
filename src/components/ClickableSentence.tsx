@@ -57,7 +57,7 @@ const ClickableSentence = ({ language, sentence, story_id }: Props) => {
     }
 
     const showResult = () => {
-      showInfoModal(`${language} Sentence Translation`, `${sentence}\n\n${translation}`, <TextToSpeech text={sentence} language={language} />);
+      showInfoModal(`${language} Sentence Translation`, `${sentence}\n\n\n${translation}`, <TextToSpeech text={sentence} language={language} />);
       setCanBeClicked(true);
     };
 

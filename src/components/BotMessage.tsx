@@ -1,4 +1,5 @@
-import { Avatar, Paper, Tooltip } from "@mui/material";
+import { Avatar, IconButton, Paper, Tooltip } from "@mui/material";
+import TranslateIcon from '@mui/icons-material/Translate';
 import ClickableWord from "./ClickableWord";
 import TLanguage from "../database/TLanguage";
 import useInfoModal from "./base/useInfoModal";
@@ -17,9 +18,9 @@ const BotMessage = ({ content, language }: Props) => {
   const [avatarCanBeClicked, setAvatarCanBeClicked] = useState<boolean>(true);
 
   /**
-   * Translate the entire bot's message. To be used on the Avatar's onClick event.
+   * Translate the entire bot's message. Used on the Avatar and translate icon onClick events.
    */
-  const translateBotMessageOnAvatarClick = async () => {
+  const translateBotMessage = async () => {
     if (!avatarCanBeClicked) return;
     setAvatarCanBeClicked(false);
 
@@ -29,7 +30,7 @@ const BotMessage = ({ content, language }: Props) => {
     const translation = await Bot.GenerateMessageTranslation(content, language);
 
     const showResult = () => {
-      showInfoModal(`${language} Message Translation`, `${content}\n\n${translation}`, <TextToSpeech text={content} language={language} />);
+      showInfoModal(`${language} Message Translation`, `${content}\n\n\n${translation}`, <TextToSpeech text={content} language={language} />);
       setAvatarCanBeClicked(true);
     };
 
@@ -49,7 +50,7 @@ const BotMessage = ({ content, language }: Props) => {
               className="chat-avatar"
               alt='pfp'
               src='/robotica.png'
-              onClick={translateBotMessageOnAvatarClick}
+              onClick={translateBotMessage}
               sx={{ cursor: 'pointer' }}
             />
           </Tooltip>
@@ -60,7 +61,14 @@ const BotMessage = ({ content, language }: Props) => {
               )
             }
           </div>
-          <TextToSpeech text={content} language={language} />
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <Tooltip title="Translate message" placement="top">
+              <IconButton size="small" aria-label="translate message" onClick={translateBotMessage}>
+                <TranslateIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <TextToSpeech text={content} language={language} />
+          </div>
         </div>
       </Paper>
       { !avatarCanBeClicked && <Loading />}

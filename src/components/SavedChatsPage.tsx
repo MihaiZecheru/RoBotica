@@ -2,17 +2,23 @@ import { CSSProperties, useEffect, useState } from "react";
 import { AuthenticatedComponentDefaultProps } from "./base/Authenticator";
 import SavedChat from "./SavedChat";
 import supabase from "../database/supabase-config";
-import { ConversationID, UserID } from "../database/ID";
+import { ConversationID, MessageID, UserID } from "../database/ID";
 import { Button, Paper } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import Database from "../database/Database";
 import isMobile from "../functions/isMobile";
+import { TGrammarCheckData } from "../database/TGrammarAndSpellcheck";
 
 type ConversationPreview = {
   id: ConversationID;
   last_bot_msg: string;
   last_user_msg: string;
-  all_messages: Array<{ content: string, is_bot: boolean }>;
+  all_messages: Array<{
+    id?: MessageID;
+    content: string;
+    is_bot: boolean;
+    grammar_check?: TGrammarCheckData | null;
+  }>;
 };
 
 const SavedChatsPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) => {
