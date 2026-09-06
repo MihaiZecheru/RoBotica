@@ -61,7 +61,8 @@ CREATE TABLE public."UserSettings" (
     user_id uuid DEFAULT auth.uid() NOT NULL,
     level public."TLevel" DEFAULT 'Beginner'::public."TLevel" NOT NULL,
     language public."TLanguage" DEFAULT 'Romanian'::public."TLanguage" NOT NULL,
-    gender public."TGender" DEFAULT 'Man'::public."TGender" NOT NULL
+    gender public."TGender" DEFAULT 'Man'::public."TGender" NOT NULL,
+    vocab_questions_answered integer DEFAULT 0 NOT NULL
 );
 CREATE TABLE public."WordTranslationAndExamples" (
     word text NOT NULL,
@@ -77,5 +78,14 @@ CREATE TABLE public."GrammarAndSpellchecks" (
     message_id uuid NOT NULL REFERENCES public."Messages"(id) ON DELETE CASCADE,
     mistake_count integer NOT NULL,
     modal_message text
+);
+CREATE TABLE public."VocabList" (
+    user_id uuid DEFAULT auth.uid() NOT NULL,
+    word text NOT NULL,
+    language public."TLanguage" NOT NULL,
+    when_added timestamp with time zone DEFAULT now() NOT NULL,
+    correct_count integer DEFAULT 0 NOT NULL,
+    incorrect_count integer DEFAULT 0 NOT NULL,
+    is_archived boolean DEFAULT false NOT NULL
 );
 

@@ -544,9 +544,51 @@ export default class Database {
 
     for (let i = 0; i < data.length; i++) {
       data[i].when_added = new Date(data[i].when_added);
+      data[i].correct_count = data[i].correct_count ?? 0;
+      data[i].incorrect_count = data[i].incorrect_count ?? 0;
+      data[i].is_archived = data[i].is_archived ?? false;
     }
 
     return data;
+  }
+
+  public static async ArchiveVocabListItem(user_id: UserID, word: string, is_archived: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('VocabList')
+      .update({ is_archived })
+      .eq('user_id', user_id)
+      .eq('word', word);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  public static async UpdateVocabWordScore(
+    user_id: UserID,
+    word: string,
+    language: TLanguage,
+    isCorrect: boolean,
+    currentCorrect: number = 0,
+    currentIncorrect: number = 0
+  ): Promise<{ correct_count: number; incorrect_count: number }> {
+    const newCorrect = isCorrect ? currentCorrect + 1 : currentCorrect;
+    const newIncorrect = !isCorrect ? currentIncorrect + 1 : currentIncorrect;
+
+    const { error } = await supabase
+      .from('VocabList')
+      .update({ correct_count: newCorrect, incorrect_count: newIncorrect })
+      .eq('user_id', user_id)
+      .eq('word', word)
+      .eq('language', language);
+
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    return { correct_count: newCorrect, incorrect_count: newIncorrect };
   }
 
   public static async DeleteVocabListItem(user_id: UserID, word: string): Promise<void> {
@@ -560,5 +602,20 @@ export default class Database {
       console.error(error);
       throw error;
     }
+  }
+
+  public static async IncrementUserQuestionsAnswered(user_id: UserID, currentCount: number = 0): Promise<number> {
+    const newTotal = currentCount + 1;
+    const { error } = await supabase
+      .from('UserSettings')
+      .update({ vocab_questions_answered: newTotal })
+      .eq('user_id', user_id);
+
+    if (error) {
+      console.error('Failed to increment vocab_questions_answered:', error);
+      throw error;
+    }
+
+    return newTotal;
   }
 }

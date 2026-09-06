@@ -1,140 +1,605 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useInfoModal from "./base/useInfoModal";
-import { Button, Input } from "@mui/material";
+import { Box, Button, CircularProgress, LinearProgress, Paper, TextField, Typography } from "@mui/material";
 import Bot, { TAiQuizResponseEvaluation } from "../functions/Bot";
 import TLanguage from "../database/TLanguage";
 import Confetti from 'react-confetti';
+import { AuthenticatedComponentDefaultProps } from "./base/Authenticator";
+import { UserID } from "../database/ID";
+import Database from "../database/Database";
+import { buildQuizQuestions, getWeightedQuizItems, TQuizQuestion } from "../functions/quizSelection";
 
-const QUIZ_LENGTH: number = 10;
 const CONFETTI_ANIMATION_DURATION_MS: number = 5000;
 
-function getRandomWords(arr: string[], amount: number): string[] {
-  const randomWords: string[] = [];
-  
-  for (let i = 0; i < Math.min(amount, arr.length); i++) {
-    while (true) {
-      const randomWord = arr[Math.floor(Math.random() * arr.length)];
-      if (randomWords.includes(randomWord)) continue;
-      randomWords.push(randomWord);
-      break;
-    }
-  }
-
-  return randomWords;
-}
-
-const VocabQuizPage = () => {
-  const [vocabList, setVocabList] = useState<string[]>();
-  const [language, setLanguage] = useState<TLanguage>();
+const VocabQuizPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) => {
+  const user_id = user?.id as UserID;
+  const language = (user_settings?.language || localStorage.getItem("language")) as TLanguage;
   const navigate = useNavigate();
-  const launchInfoModal = useInfoModal();
-  const [quizWords, setQuizWords] = useState<string[]>();
-  const [activeQuizWordIndex, setActiveQuizWordIndex] = useState<number>();
-  const [inputValue, setInputValue] = useState<string>("");
-  const [botLoading, setBotLoading] = useState<boolean>(false);
-  const [quizScores, setQuizScores] = useState<number[]>([]);
-  const [is_confetti_open, set_is_confetti_open] = useState<boolean>();
   const openInfoModal = useInfoModal();
 
-  useEffect(() => {
-    const words_in_storage = localStorage.getItem("words");
-    if (!words_in_storage) {
-      console.error("Error: 'words' key did not exist in localStorage. Starting a quiz from the /vocab page should have added it.")
-      launchInfoModal("Error", "There was an error that caused the quiz to fail");
-      return navigate('/vocab');
-    }
+  const [questions, setQuestions] = useState<TQuizQuestion[]>();
+  const [activeQuizWordIndex, setActiveQuizWordIndex] = useState<number>(0);
+  const [inputValue, setInputValue] = useState<string>("");
+  const [botLoading, setBotLoading] = useState<boolean>(false);
+  const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
+  const [loadingQuiz, setLoadingQuiz] = useState<boolean>(true);
+  const [, setQuizScores] = useState<number[]>([]);
+  const [is_confetti_open, set_is_confetti_open] = useState<boolean>();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const questionsAnsweredRef = useRef<number>(user_settings?.vocab_questions_answered || 0);
 
-    const language_in_storage = localStorage.getItem("language");
-    if (!language_in_storage) {
-      console.error("Error: 'language' key did not exist in localStorage. Starting a quiz from the /vocab page should have added it.")
-      launchInfoModal("Error", "There was an error that caused the quiz to fail");
-      return navigate('/vocab');
+  useEffect(() => {
+    if (!user_id || !language) return;
+
+    let isMounted = true;
+    setLoadingQuiz(true);
+
+    const storedQuizLength = parseInt(localStorage.getItem('quiz_length') || '10', 10);
+    const targetQuizLength = isNaN(storedQuizLength) || storedQuizLength <= 0 ? 10 : storedQuizLength;
+
+    Database.GetVocabList(user_id, language).then(async (vocab) => {
+      if (!isMounted) return;
+
+      const activeItems = vocab.filter((item) => !item.is_archived);
+      if (activeItems.length === 0) {
+        openInfoModal(
+          "Error",
+          "You have no active words in your vocab list to practice. Add words or restore them from the archive.",
+          undefined,
+          () => navigate('/vocab')
+        );
+        return;
+      }
+
+      // 1. Select up to targetQuizLength items using Anki-weighted sampling
+      const selected = getWeightedQuizItems(activeItems, targetQuizLength);
+
+      // 2. Partition selected items into multiple choice and typed
+      const shuffled = [...selected].sort(() => Math.random() - 0.5);
+      const mcCount = Math.floor(shuffled.length / 2);
+      const mcItems = shuffled.slice(0, mcCount);
+      const typedItems = shuffled.slice(mcCount);
+
+      // 3. Preload English translations for all multiple choice items
+      const translationsMap: Record<string, string> = {};
+      await Promise.all(
+        mcItems.map(async (item) => {
+          const word = item.word;
+          const cleanWord = word.replace(/[\.\,\/\\\#\!\?\$\%\^\&\*\;\:\{\}\=\_\`\~\(\)\¡\¿\"\”]/g, '').toLowerCase().trim();
+          try {
+            let cached = await Database.GetTranslationAndExamples(cleanWord, language);
+            if (cached && cached.translation && cached.translation.trim() && cached.translation.trim().toLowerCase() !== cleanWord) {
+              translationsMap[word] = cached.translation.trim();
+              return;
+            }
+
+            // Generate if not cached or cached translation is invalid
+            cached = await Bot.GenerateTranslationAndExamplesForWord(cleanWord, language);
+            if (cached && cached.translation && cached.translation.trim() && cached.translation.trim().toLowerCase() !== cleanWord) {
+              Database.AddTranslationAndExample(cached).catch(() => {});
+              translationsMap[word] = cached.translation.trim();
+              return;
+            }
+          } catch (e) {
+            console.warn(`Could not load full translation for ${word}:`, e);
+          }
+
+          // Fallback: direct translation endpoint if translate-word regex or database failed
+          try {
+            const direct = await Bot.GenerateMessageTranslation(cleanWord, language);
+            if (direct && direct.trim() && direct.trim().toLowerCase() !== cleanWord) {
+              translationsMap[word] = direct.trim().replace(/^["']|["']$/g, '');
+              return;
+            }
+          } catch (e2) {
+            console.warn(`Direct translation also failed for ${word}:`, e2);
+          }
+
+          translationsMap[word] = cleanWord;
+        })
+      );
+
+      if (!isMounted) return;
+
+      // 4. Build balanced bidirectional quiz questions (strictly alternated)
+      const generatedQuestions = buildQuizQuestions(mcItems, typedItems, activeItems, translationsMap);
+      setQuestions(generatedQuestions);
+      setActiveQuizWordIndex(0);
+      setLoadingQuiz(false);
+    }).catch((err) => {
+      console.error("Failed to load vocab quiz questions:", err);
+      openInfoModal("Error", "Failed to load vocab quiz. Returning to vocab list.", undefined, () => navigate('/vocab'));
+    });
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user_id, language, navigate]);
+
+  useEffect(() => {
+    (document.activeElement as HTMLElement)?.blur();
+    if (questions && questions[activeQuizWordIndex]?.type === 'typed_translation') {
+      inputRef.current?.focus();
     }
-    
-    const _vocabList = JSON.parse(words_in_storage);
-    setVocabList(_vocabList);
-    setLanguage(language_in_storage as TLanguage);
-    setQuizWords(getRandomWords(_vocabList, QUIZ_LENGTH));
-    setActiveQuizWordIndex(0);
-  }, [navigate]);
+  }, [activeQuizWordIndex, questions]);
+
+  const currentQuestionRef = useRef<TQuizQuestion | null>(null);
+  currentQuestionRef.current = questions && questions[activeQuizWordIndex] ? questions[activeQuizWordIndex] : null;
+
+  const isEvaluatingRef = useRef<boolean>(false);
+  isEvaluatingRef.current = isEvaluating;
+
+  const botLoadingRef = useRef<boolean>(false);
+  botLoadingRef.current = botLoading;
 
   const launch_confetti = () => {
     set_is_confetti_open(true);
     setTimeout(() => set_is_confetti_open(false), CONFETTI_ANIMATION_DURATION_MS);
   };
 
-  const handleSubmission = async () => {
-    const foreignWord: string = quizWords![activeQuizWordIndex!];
-    setBotLoading(true);
-    const response: TAiQuizResponseEvaluation = await Bot.IsQuizResponseCorrect(foreignWord, language!, inputValue);
-    setBotLoading(false);
+  const advanceOrFinishQuiz = (
+    newScore: number,
+    isCorrect: boolean,
+    feedbackTitle: string,
+    feedbackMsg: string
+  ) => {
+    if (!questions) return;
+    const currentQ = questions[activeQuizWordIndex];
+    setIsEvaluating(true);
 
-    if (response.correctness === 'Correct') {
-      openInfoModal("Yipee!", `"${inputValue}" is a translation for "${foreignWord}"`);
-    } else if (response.correctness === 'Partial') {
-      openInfoModal("Almost!", response.info!);
-    } else if (response.correctness === 'Wrong') {
-      openInfoModal("That's not right...", response.info!)
-    }
+    // Persist updated mastery counts in database
+    Database.UpdateVocabWordScore(
+      user_id,
+      currentQ.word,
+      language,
+      isCorrect,
+      currentQ.item.correct_count || 0,
+      currentQ.item.incorrect_count || 0
+    ).then((updated) => {
+      currentQ.item.correct_count = updated.correct_count;
+      currentQ.item.incorrect_count = updated.incorrect_count;
+    }).catch((err) => {
+      console.error("Failed to update vocab word score:", err);
+    });
 
-    const newScore: number = response.correctness === "Correct" ? 1 : response.correctness === "Partial" ? 0.5 : 0;
+    // Increment all-time questions answered in UserSettings
+    Database.IncrementUserQuestionsAnswered(user_id, questionsAnsweredRef.current)
+      .then((newTotal) => {
+        questionsAnsweredRef.current = newTotal;
+      })
+      .catch((err) => {
+        console.warn("Failed to increment user questions answered:", err);
+      });
 
-    setQuizScores(prevScores => {
+    setQuizScores((prevScores) => {
       const updatedScores = [...prevScores, newScore];
+      const isQuizDone = activeQuizWordIndex === questions.length - 1;
 
-      // Check if the quiz is over
-      if (activeQuizWordIndex === quizWords!.length - 1) {
+      if (isQuizDone) {
         launch_confetti();
         const sum = updatedScores.reduce((acc: number, score: number) => acc + score, 0);
-        const scoreBreakdown = updatedScores.reduce((acc: string, score: number, index: number) => acc + `${quizWords![index!]}: ${score}\n`, '');
-        openInfoModal("Quiz Results", `You got ${sum}/${quizWords!.length} points. Here's the breakdown:\n\n${scoreBreakdown}`);
-        setActiveQuizWordIndex(0);
-        return []; // reset scores
+        const scoreBreakdown = updatedScores.reduce(
+          (acc: string, score: number, index: number) =>
+            acc + `${questions[index].word}: ${score === 1 ? 'Correct (+1)' : score === 0.5 ? 'Partial (+0.5)' : 'Missed (0)'}\n`,
+          ''
+        );
+
+        openInfoModal(
+          "Quiz Results",
+          `${feedbackMsg}\n\nYou scored ${sum}/${questions.length} points!\n\n${scoreBreakdown}`,
+          undefined,
+          () => {
+            setIsEvaluating(false);
+            navigate('/vocab');
+          }
+        );
+        return [];
       } else {
-        // next question
-        setActiveQuizWordIndex(activeQuizWordIndex! + 1);
+        openInfoModal(
+          feedbackTitle,
+          feedbackMsg,
+          undefined,
+          () => {
+            (document.activeElement as HTMLElement)?.blur();
+            setIsEvaluating(false);
+            setActiveQuizWordIndex((prev) => prev + 1);
+            setInputValue("");
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }
+        );
       }
 
       return updatedScores;
     });
   };
 
-  const inputOnKeyDown = (e: any) => {
-    if (e.key === 'Enter') {
-      handleSubmission();
-      setInputValue("");
+  const handleTypedSubmission = async () => {
+    if (!inputValue.trim() || botLoading || isEvaluating || !questions || questions.length === 0) return;
+
+    const submittedText = inputValue.trim();
+    const currentQ = questions[activeQuizWordIndex];
+    const foreignWord: string = currentQ.word;
+    setInputValue("");
+    setBotLoading(true);
+    setIsEvaluating(true);
+
+    try {
+      const response: TAiQuizResponseEvaluation = await Bot.IsQuizResponseCorrect(
+        foreignWord,
+        language,
+        submittedText
+      );
+      setBotLoading(false);
+
+      const isCorrect = response.correctness === 'Correct';
+      const score: number = response.correctness === "Correct" ? 1 : response.correctness === "Partial" ? 0.5 : 0;
+      const title = response.correctness === 'Correct' ? 'Yipee!' : response.correctness === 'Partial' ? 'Almost!' : "That's not right...";
+      const msg = response.correctness === 'Correct'
+        ? `"${submittedText}" is a correct translation for "${foreignWord}".`
+        : response.info || `"${submittedText}" was not recognized as a correct translation for "${foreignWord}".`;
+
+      advanceOrFinishQuiz(score, isCorrect, title, msg);
+    } catch (err) {
+      setBotLoading(false);
+      setIsEvaluating(false);
+      setInputValue(submittedText);
+      openInfoModal("Error", "Failed to evaluate response. Please try again.", undefined, () => inputRef.current?.focus());
     }
   };
 
-  return (
-    <div style={{ backgroundColor: '#87cefa', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      { is_confetti_open && <Confetti width={window.innerWidth} height={window.innerHeight} initialVelocityY={20} /> }
-      <div style={{ backgroundColor: 'white', borderRadius: '1rem', width: '40vw', height: '40vh' }}>
-        <div style={{ width: '100%', height: '2rem', backgroundColor: 'var(--primary-blue)', borderTopLeftRadius: '1rem', borderTopRightRadius: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
-          <span style={{ padding: '0.5rem', paddingRight: '1rem', color: 'white' }}>{(activeQuizWordIndex || 0) + 1}/{quizWords?.length}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center', height: 'calc(100% - 2rem)' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', padding: '1rem' }}>
-            {
-              quizWords &&
-              <div>
-                <span>Translate to English</span>
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <h2 style={{ margin: 0, marginLeft: '.5rem' }}>{quizWords[activeQuizWordIndex || 0]}</h2>
-                </div>
-              </div>
-            }
-            <Input disabled={botLoading} onKeyDown={inputOnKeyDown} value={inputValue} onChange={(e) => setInputValue(e.target.value)} style={{ marginTop: '1rem' }} />
-          </div>
-        </div>
-      </div>
+  const handleMultipleChoiceSelect = (selectedOption: string) => {
+    if (botLoadingRef.current || isEvaluatingRef.current) return;
+    (document.activeElement as HTMLElement)?.blur();
+    setIsEvaluating(true);
 
-      <Button type='button' variant="contained" onClick={() => { navigate('/navily') }} sx={{
-        backgroundColor: 'var(--primary-blue)', color: 'white', position: 'fixed', bottom: '1rem', right: '1rem'
-      }}>Navily</Button>
-    </div>
+    const currentQ = currentQuestionRef.current;
+    if (!currentQ) return;
+    const isCorrect = selectedOption.toLowerCase() === (currentQ.correctOption || '').toLowerCase();
+    const score = isCorrect ? 1 : 0;
+    const title = isCorrect ? 'Yipee!' : "That's not right...";
+    const msg = isCorrect
+      ? `"${selectedOption}" is correct for "${currentQ.englishPrompt}"!`
+      : `The correct ${language} word for "${currentQ.englishPrompt}" is "${currentQ.correctOption}". You selected "${selectedOption}".`;
+
+    advanceOrFinishQuiz(score, isCorrect, title, msg);
+  };
+
+
+
+  const inputOnKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTypedSubmission();
+    }
+  };
+
+  if (loadingQuiz || !questions || questions.length === 0) {
+    return (
+      <Box
+        sx={{
+          backgroundColor: '#ffffff',
+          minHeight: '100vh',
+          width: '100vw',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 2,
+        }}
+      >
+        <CircularProgress sx={{ color: 'var(--primary-blue)' }} />
+        <Typography sx={{ color: '#9ca3af', fontSize: '0.9rem', fontWeight: 500 }}>
+          Preparing personalized quiz...
+        </Typography>
+      </Box>
+    );
+  }
+
+  const currentQ = questions[activeQuizWordIndex];
+  const progressPercent = Math.round(((activeQuizWordIndex + 1) / questions.length) * 100);
+
+  return (
+    <Box
+      sx={{
+        backgroundColor: '#ffffff',
+        minHeight: '100vh',
+        width: '100vw',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        p: 2,
+        boxSizing: 'border-box',
+        position: 'relative',
+      }}
+    >
+      {is_confetti_open && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          initialVelocityY={20}
+          style={{ zIndex: 1000 }}
+        />
+      )}
+
+      <Paper
+        elevation={0}
+        sx={{
+          width: '100%',
+          maxWidth: '440px',
+          p: { xs: 3, sm: 4.5 },
+          borderRadius: '16px',
+          border: '1px solid #e5e7eb',
+          backgroundColor: '#ffffff',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+        }}
+      >
+        {/* Minimal Progress Indicator */}
+        <Box sx={{ width: '100%', mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.2 }}>
+            <Typography
+              sx={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: '#9ca3af',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}
+            >
+              Question {activeQuizWordIndex + 1} of {questions.length}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: '#9ca3af',
+              }}
+            >
+              {progressPercent}%
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={progressPercent}
+            sx={{
+              height: 5,
+              borderRadius: 3,
+              backgroundColor: '#f3f4f6',
+              '& .MuiLinearProgress-bar': {
+                backgroundColor: 'var(--primary-blue)',
+                borderRadius: 3,
+              },
+            }}
+          />
+        </Box>
+
+        {/* Question Prompt */}
+        {currentQ.type === 'typed_translation' ? (
+          <>
+            <Typography
+              sx={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#9ca3af',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                mb: 1,
+              }}
+            >
+              Translate to English
+            </Typography>
+
+            <Typography
+              variant="h4"
+              component="h2"
+              sx={{
+                fontWeight: 700,
+                color: '#111827',
+                mb: 3.5,
+                wordBreak: 'break-word',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {currentQ.word}
+            </Typography>
+
+            {/* Translation Input */}
+            <TextField
+              inputRef={inputRef}
+              variant="outlined"
+              placeholder="Type your translation..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={inputOnKeyDown}
+              disabled={botLoading}
+              fullWidth
+              autoFocus
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '10px',
+                  backgroundColor: '#f9fafb',
+                  fontSize: '1.05rem',
+                  transition: 'border-color 0.2s, background-color 0.2s',
+                  '& fieldset': {
+                    borderColor: '#e5e7eb',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#d1d5db',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'var(--primary-blue)',
+                  },
+                  '&.Mui-focused': {
+                    backgroundColor: '#ffffff',
+                  },
+                },
+                '& .MuiOutlinedInput-input': {
+                  textAlign: 'center',
+                  padding: '12px 14px',
+                },
+              }}
+            />
+
+            {/* Submit Button */}
+            <Button
+              variant="contained"
+              disableElevation
+              onClick={handleTypedSubmission}
+              disabled={botLoading || !inputValue.trim()}
+              sx={{
+                width: '100%',
+                py: 1.25,
+                borderRadius: '10px',
+                backgroundColor: 'var(--primary-blue)',
+                color: '#ffffff',
+                textTransform: 'none',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor: '#0072de',
+                  boxShadow: 'none',
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: '#f3f4f6',
+                  color: '#9ca3af',
+                },
+              }}
+            >
+              {botLoading ? (
+                <CircularProgress size={22} sx={{ color: 'inherit' }} />
+              ) : (
+                'Submit'
+              )}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Typography
+              sx={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#9ca3af',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                mb: 1,
+              }}
+            >
+              Select the {language} word for
+            </Typography>
+
+            <Typography
+              variant="h4"
+              component="h2"
+              sx={{
+                fontWeight: 700,
+                color: '#111827',
+                mb: 3,
+                wordBreak: 'break-word',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {currentQ.englishPrompt}
+            </Typography>
+
+            {/* Multiple Choice Options */}
+            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+              {currentQ.options?.map((option, idx) => (
+                <Button
+                  key={`q-${activeQuizWordIndex}-opt-${idx}`}
+                  variant="outlined"
+                  onClick={() => handleMultipleChoiceSelect(option)}
+                  disabled={botLoading || isEvaluating}
+                  sx={{
+                    width: '100%',
+                    py: 1.3,
+                    px: 2,
+                    borderRadius: '10px',
+                    borderColor: '#e5e7eb',
+                    backgroundColor: '#f9fafb',
+                    color: '#1e293b',
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    boxShadow: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease',
+                    '&:hover': {
+                      borderColor: 'var(--primary-blue)',
+                      backgroundColor: '#eff6ff',
+                      color: 'var(--primary-blue)',
+                    },
+                    '&:focus, &:focus-visible, &.Mui-focusVisible': {
+                      outline: 'none',
+                      borderColor: '#e5e7eb',
+                      backgroundColor: '#f9fafb',
+                      color: '#1e293b',
+                    },
+                    '&.Mui-disabled': {
+                      backgroundColor: '#f9fafb',
+                      borderColor: '#f1f5f9',
+                    },
+                  }}
+                >
+                  {option}
+                </Button>
+              ))}
+            </Box>
+          </>
+        )}
+      </Paper>
+
+      {/* Subtle bottom navigation */}
+      <Button
+        type="button"
+        onClick={() => navigate('/vocab')}
+        sx={{
+          position: 'fixed',
+          bottom: '1.25rem',
+          left: '1.5rem',
+          color: '#9ca3af',
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: '0.9rem',
+          '&:hover': {
+            color: '#4b5563',
+            backgroundColor: 'transparent',
+          },
+        }}
+      >
+        Exit Quiz
+      </Button>
+
+      <Button
+        type="button"
+        onClick={() => navigate('/navily')}
+        sx={{
+          position: 'fixed',
+          bottom: '1.25rem',
+          right: '1.5rem',
+          color: 'var(--primary-blue)',
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: '0.9rem',
+        }}
+      >
+        Navily
+      </Button>
+    </Box>
   );
-}
- 
-export default VocabQuizPage;
+};
+
+export default VocabQuizPage;

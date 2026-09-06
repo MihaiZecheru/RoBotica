@@ -7,6 +7,7 @@ export type TUserSettings = {
   level: 'Beginner' | 'Intermediate';
   language: TLanguage;
   gender: 'Man' | 'Woman';
+  vocab_questions_answered?: number;
 };
 
 export default async function GetUser(): Promise<User> {
@@ -40,5 +41,7 @@ export async function GetUserSettings(user_id: UserID): Promise<TUserSettings> {
     throw error;
   }
 
-  return data![0] as TUserSettings;
+  const settings = (data?.[0] || {}) as TUserSettings;
+  settings.vocab_questions_answered = settings.vocab_questions_answered ?? 0;
+  return settings;
 }

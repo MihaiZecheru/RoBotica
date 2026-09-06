@@ -6,6 +6,9 @@ type TVocabListItem = {
   word: string;
   language: TLanguage;
   when_added: Date;
+  correct_count: number;
+  incorrect_count: number;
+  is_archived: boolean;
 };
 
 export default TVocabListItem;

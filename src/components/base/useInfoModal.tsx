@@ -1,4 +1,4 @@
-import React, { createContext, ReactElement, useContext, useState } from 'react';
+import React, { createContext, ReactElement, useContext, useEffect, useRef, useState } from 'react';
 import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button } from '@mui/material';
 import { stopActiveTTS, TTS_AUDIO_ID } from '../TextToSpeech';
 
@@ -81,26 +81,70 @@ interface InfoModalProps {
 }
 
 const InfoModal: React.FC<InfoModalProps> = ({ state, onClose }) => {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (state?.open) {
+      const timer = setTimeout(() => {
+        closeButtonRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [state?.open]);
+
   return (
     <Dialog
       open={state?.open || false}
       onClose={onClose}
       aria-labelledby="info-dialog-title"
       aria-describedby="info-dialog-description"
+      TransitionProps={{
+        onEntered: () => {
+          closeButtonRef.current?.focus();
+        },
+      }}
       sx={{
         '& .MuiDialog-paper': {
           minWidth: 'min(425px, 80vw)',
+          borderRadius: '12px',
+          outline: 'none',
         },
       }}
     >
-      <DialogTitle id="info-dialog-title"sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>{state?.title || ''} {state?.translate_button && state.translate_button}</DialogTitle>
+      <DialogTitle id="info-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {state?.title || ''} {state?.translate_button && state.translate_button}
+      </DialogTitle>
       <DialogContent>
-        <DialogContentText id="info-dialog-description" sx={{ fontFamily: 'Comfortaa', whiteSpace: 'pre-line', lineHeight: '1' }}>
+        <DialogContentText id="info-dialog-description" sx={{ fontFamily: 'Comfortaa', whiteSpace: 'pre-line', lineHeight: '1.4' }}>
           {state?.message || ''}
         </DialogContentText>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} color="primary">
+        <Button
+          ref={closeButtonRef}
+          autoFocus
+          onClick={onClose}
+          color="primary"
+          disableRipple
+          sx={{
+            transition: 'background-color 0.15s ease-in-out',
+            outline: 'none',
+            '&:focus, &:focus-visible, &.Mui-focusVisible': {
+              backgroundColor: 'var(--secondary-blue, #D3E9FF)',
+              outline: 'none',
+              boxShadow: 'none',
+            },
+            '&:hover': {
+              backgroundColor: 'var(--secondary-blue, #D3E9FF)',
+            },
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onClose();
+            }
+          }}
+        >
           Close
         </Button>
       </DialogActions>
