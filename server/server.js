@@ -140,25 +140,13 @@ app.post('/speech-to-text', async (req, res) => {
   }
 });
 
-app.post('/genius-search', (req, res) => {
-  const q = req.body.q;
-
-  fetch(`https://api.genius.com/search?q=${q}`, {
-    headers: {
-      Authorization: `Bearer ${process.env.GENIUS_API_KEY}`
-    }
-  }).then((response) => response.json()).then((data) => {
-    res.send(data);
-  });
-});
-
 /**
  * Endpoint: /api/bot/chat
  */
 app.post('/api/bot/chat', async (req, res) => {
   const { user_message, language, user_skill, user_gender, past_messages } = req.body;
 
-  const systemInstruction = `You are a native human ${language === 'Spanish' ? 'Mexican ' : ''}${language} speaker having a friendly chat with a ${user_skill} user (gender: ${user_gender}) who is learning ${language}.
+  const systemInstruction = `You are a native male human ${language === 'Spanish' ? 'Mexican ' : ''}${language} speaker having a friendly chat with a ${user_skill} user (gender: ${user_gender}) who is learning ${language}.
 Your goal is to have a natural, engaging conversation that feels like talking to a real friend/penpal, not a teacher.
 
 Guidelines for a natural and human feel:
