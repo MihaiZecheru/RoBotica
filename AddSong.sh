@@ -72,9 +72,8 @@ else
   exit 1
 fi
 
-# 4. Create directories
+# 4. Create directory
 mkdir -p server/music
-mkdir -p music
 
 # 5. Extract metadata if Title or Artist not provided
 TITLE="$3"
@@ -134,9 +133,7 @@ echo ""
 echo "Downloading audio stream using yt-dlp..."
 $YTDL_CMD -x --audio-format mp3 --audio-quality 192K --no-playlist -o "server/music/${YOUTUBE_ID}.%(ext)s" "https://www.youtube.com/watch?v=$YOUTUBE_ID"
 
-# Keep copy in music/ as well
 if [ -f "server/music/${YOUTUBE_ID}.mp3" ]; then
-  cp "server/music/${YOUTUBE_ID}.mp3" "music/${YOUTUBE_ID}.mp3" 2>/dev/null || true
   echo "Audio file successfully saved to server/music/${YOUTUBE_ID}.mp3"
 else
   echo "Warning: Audio file server/music/${YOUTUBE_ID}.mp3 was not created."

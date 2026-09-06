@@ -21,9 +21,10 @@ interface Props {
   song: TSong;
 	full_lyrics: string;
   onTranslate?: () => void;
+  onCloseModal?: () => void;
 }
 
-const ClickableLyric = ({ language, lyric, song, onTranslate, full_lyrics }: Props) => {
+const ClickableLyric = ({ language, lyric, song, onTranslate, onCloseModal, full_lyrics }: Props) => {
   const showInfoModal = useInfoModal();  
   const [canBeClicked, setCanBeClicked] = useState(true);
 
@@ -36,23 +37,33 @@ const ClickableLyric = ({ language, lyric, song, onTranslate, full_lyrics }: Pro
     const min_duration = 500;
     const startTime = new Date().getTime();
 
-    let translationAndMeaning: { translation: string, meaning: string } | null
-      = await Database.GetLyricTranslationAndMeaning(lyric, language, song.id);
+    try {
+      let translationAndMeaning: { translation: string, meaning: string } | null
+        = await Database.GetLyricTranslationAndMeaning(lyric, language, song.id);
 
-    if (translationAndMeaning === null) {
-      translationAndMeaning = await Bot.GenerateLyricTranslationAndMeaning(lyric, language, song, full_lyrics);
-      Database.AddLyricTranslation(lyric, language, song.id, translationAndMeaning!.translation, translationAndMeaning!.meaning);
-    }
+      if (translationAndMeaning === null) {
+        translationAndMeaning = await Bot.GenerateLyricTranslationAndMeaning(lyric, language, song, full_lyrics);
+        Database.AddLyricTranslation(lyric, language, song.id, translationAndMeaning!.translation, translationAndMeaning!.meaning);
+      }
 
-    const showResult = () => {
-      showInfoModal(`${language} Lyric Translation`, `${lyric}\n\n${translationAndMeaning?.translation}\n\nMeaning: ${translationAndMeaning?.meaning}`);
+      const showResult = () => {
+        showInfoModal(
+          `${language} Lyric Translation`,
+          `${lyric}\n\n${translationAndMeaning?.translation}\n\n${translationAndMeaning?.meaning}`,
+          undefined,
+          onCloseModal
+        );
+        setCanBeClicked(true);
+      };
+
+      if (new Date().getTime() - startTime < min_duration) {
+        setTimeout(showResult, min_duration - (new Date().getTime() - startTime));
+      } else {
+        showResult();
+      }
+    } catch (err: any) {
+      showInfoModal('Error', err?.message || 'Failed to translate lyric', undefined, onCloseModal);
       setCanBeClicked(true);
-    };
-
-    if (new Date().getTime() - startTime < min_duration) {
-      setTimeout(showResult, min_duration - (new Date().getTime() - startTime));
-    } else {
-      showResult();
     }
   };
 

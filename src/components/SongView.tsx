@@ -4,7 +4,7 @@ import { AuthenticatedComponentDefaultProps } from "./base/Authenticator";
 import Database from "../database/Database";
 import { SongID } from "../database/ID";
 import { useEffect, useRef, useState } from "react";
-import { Button, Paper, Tooltip } from "@mui/material";
+import { Button, CircularProgress, Paper, Tooltip } from "@mui/material";
 import ClickableLyric from "./ClickableLyric";
 import ClickableWord from "./ClickableWord";
 import { getApiUrl } from "../functions/ApiConfig";
@@ -128,9 +128,11 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
       });
   }, [song]);
 
+  const isSynchronized = lyricsData.synced.length > 0 && !useYouTubeFallback;
+
   // Find active line index
   let activeIndex = -1;
-  if (lyricsData.synced.length > 0) {
+  if (isSynchronized) {
     for (let i = 0; i < lyricsData.synced.length; i++) {
       if (currentTime >= lyricsData.synced[i].time) {
         activeIndex = i;
@@ -142,13 +144,23 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
 
   // Auto-scroll active line to center
   useEffect(() => {
-    if (activeLineRef.current && containerRef.current) {
+    if (isSynchronized && activeLineRef.current && containerRef.current) {
       activeLineRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'center'
       });
     }
-  }, [activeIndex]);
+  }, [activeIndex, isSynchronized]);
+
+  const getPlainLyricsLines = () => {
+    if (lyricsData.plain) {
+      return lyricsData.plain.replace(/\r/g, '').trim().split('\n');
+    }
+    if (lyricsData.synced.length > 0) {
+      return lyricsData.synced.map(line => line.text);
+    }
+    return (song?.lyrics || '').replace(/\r/g, '').replace(/\[\d{2}:\d{2}\.\d{2,3}\]/g, '').trim().split('\n');
+  };
 
   const seek = (time: number) => {
     if (audioRef.current) {
@@ -157,8 +169,11 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
     }
   };
 
+  const wasPlayingRef = useRef<boolean>(false);
+
   const pausePlayback = () => {
     if (audioRef.current && !audioRef.current.paused) {
+      wasPlayingRef.current = true;
       audioRef.current.pause();
     }
     if (useYouTubeFallback) {
@@ -167,6 +182,26 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
         iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
       }
     }
+  };
+
+  const resumePlayback = () => {
+    if (wasPlayingRef.current) {
+      if (audioRef.current) {
+        audioRef.current.play().catch(err => {
+          console.warn("Failed to resume playback:", err);
+        });
+      }
+      wasPlayingRef.current = false;
+    }
+  };
+
+  const togglePlayerMode = () => {
+    if (!useYouTubeFallback) {
+      if (audioRef.current && !audioRef.current.paused) {
+        audioRef.current.pause();
+      }
+    }
+    setUseYouTubeFallback(!useYouTubeFallback);
   };
 
   if (loading || !song) {
@@ -185,7 +220,7 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
             <Button
               size="small"
               variant="outlined"
-              onClick={() => setUseYouTubeFallback(!useYouTubeFallback)}
+              onClick={togglePlayerMode}
               startIcon={useYouTubeFallback ? <AudiotrackIcon /> : <OndemandVideoIcon />}
             >
               {useYouTubeFallback ? "Stream Audio" : "YouTube Video"}
@@ -254,7 +289,7 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
 
                 <button
                   className="player-mode-toggle"
-                  onClick={() => setUseYouTubeFallback(!useYouTubeFallback)}
+                  onClick={togglePlayerMode}
                 >
                   {useYouTubeFallback ? "Switch to Audio Stream" : "Switch to YouTube Video"}
                 </button>
@@ -266,7 +301,7 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
           <div className="song-lyrics-panel">
             <div className="song-lyrics-header">
               <span>Lyrics</span>
-              {lyricsData.synced.length > 0 && (
+              {isSynchronized && (
                 <span className="song-lyrics-badge">
                   <MusicNoteIcon style={{ fontSize: '14px' }} /> Synchronized
                 </span>
@@ -276,10 +311,10 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
             <div ref={containerRef} className="song-lyrics-scroll-container hide-scrollbar-y">
               {lyricsData.loading ? (
                 <div className="lyrics-status-box">
-                  <Loading />
-                  <p>Loading synchronized lyrics...</p>
+                  <CircularProgress size="2.5rem" sx={{ color: 'var(--musica-pink-dark, #FF2C5A)' }} />
+                  <p>Loading lyrics...</p>
                 </div>
-              ) : lyricsData.synced.length > 0 ? (
+              ) : isSynchronized ? (
                 /* Synchronized LRC Lyrics */
                 <div>
                   {lyricsData.synced.map((line, index) => {
@@ -313,12 +348,25 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
 
                         <div className="lyric-text-content">
                           {line.text.split(" ").map((word, wIdx) => (
-                            <ClickableWord key={wIdx} word={word} language={song.language} onTranslate={pausePlayback} />
+                            <ClickableWord
+                              key={wIdx}
+                              word={word}
+                              language={song.language}
+                              onTranslate={pausePlayback}
+                              onCloseModal={resumePlayback}
+                            />
                           ))}
                         </div>
 
                         <div className="lyric-line-actions" onClick={(e) => e.stopPropagation()}>
-                          <ClickableLyric language={song.language} lyric={line.text} song={song} onTranslate={pausePlayback} full_lyrics={(song.lyrics || '').replace(/\r/g, '')} />
+                          <ClickableLyric
+                            language={song.language}
+                            lyric={line.text}
+                            song={song}
+                            onTranslate={pausePlayback}
+                            onCloseModal={resumePlayback}
+                            full_lyrics={(song.lyrics || '').replace(/\r/g, '')}
+                          />
                         </div>
                       </div>
                     );
@@ -327,14 +375,27 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
               ) : (
                 /* Plain Lyrics Fallback */
                 <div className="plain-lyrics-container">
-                  {(lyricsData.plain || song.lyrics || '').replace(/\r/g, '').trim().split("\n").map((lyric, index) => (
+                  {getPlainLyricsLines().map((lyric, index) => (
                     <div key={index} style={{ marginBottom: '6px' }}>
                       {lyric.split(" ").map((word, wIdx) => (
-                        <ClickableWord key={wIdx} word={word} language={song.language} onTranslate={pausePlayback} />
+                        <ClickableWord
+                          key={wIdx}
+                          word={word}
+                          language={song.language}
+                          onTranslate={pausePlayback}
+                          onCloseModal={resumePlayback}
+                        />
                       ))}
                       {lyric === "" && <br />}
                       {!lyric.startsWith("[") && !lyric.endsWith("]") && lyric !== "" && (
-                        <ClickableLyric language={song.language} lyric={lyric} song={song} onTranslate={pausePlayback} full_lyrics={(song.lyrics || '').replace(/\r/g, '')} />
+                        <ClickableLyric
+                          language={song.language}
+                          lyric={lyric}
+                          song={song}
+                          onTranslate={pausePlayback}
+                          onCloseModal={resumePlayback}
+                          full_lyrics={(song.lyrics || '').replace(/\r/g, '')}
+                        />
                       )}
                     </div>
                   ))}

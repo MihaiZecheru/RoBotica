@@ -18,12 +18,13 @@ interface Props {
   word: string;
   language: TLanguage;
   onTranslate?: () => void;
+  onCloseModal?: () => void;
 }
 
 /**
  * Represents a word in a message that can be clicked on to get a translation and example sentence.
  */
-const ClickableWord = ({ word, language, onTranslate }: Props) => {
+const ClickableWord = ({ word, language, onTranslate, onCloseModal }: Props) => {
   const showInfoModal = useInfoModal();
   const [canBeClicked, setCanBeClicked] = useState<boolean>(true);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -38,7 +39,6 @@ const ClickableWord = ({ word, language, onTranslate }: Props) => {
    */
   const handleClick = (e: React.MouseEvent<HTMLSpanElement>) => {
     if (!canBeClicked) return;
-    onTranslate?.();
     // If ctrl+click, then pronounce the word using the text to speech API
     if (e.ctrlKey) {
       if (isPlaying) return;
@@ -69,7 +69,8 @@ const ClickableWord = ({ word, language, onTranslate }: Props) => {
     }
     
     // Open the modal with the translation and example sentences
-    
+    onTranslate?.();
+
     setCanBeClicked(false);
     const min_duration = 500;
     const startTime = new Date().getTime();
@@ -80,7 +81,8 @@ const ClickableWord = ({ word, language, onTranslate }: Props) => {
           response = await Bot.GenerateTranslationAndExamplesForWord(word_cleaned, language);
           Database.AddTranslationAndExample(response);
         } catch (e: any) {
-          showInfoModal('Error', e.message);
+          showInfoModal('Error', e.message, undefined, onCloseModal);
+          setCanBeClicked(true);
           return;
         }
       }
@@ -97,7 +99,8 @@ const ClickableWord = ({ word, language, onTranslate }: Props) => {
             text={`<speak>${word_cleaned}.<break time="1s" />${response!.example_sentence1}<break time="1s" />${response!.example_sentence2}</speak>`}
             language={language}
             ssml={true}
-          />
+          />,
+          onCloseModal
         );
         setCanBeClicked(true);
       };
@@ -107,6 +110,9 @@ const ClickableWord = ({ word, language, onTranslate }: Props) => {
       } else {
         showResult();
       }
+    }).catch((err: any) => {
+      showInfoModal('Error', err?.message || 'Failed to translate word', undefined, onCloseModal);
+      setCanBeClicked(true);
     });
   };
   

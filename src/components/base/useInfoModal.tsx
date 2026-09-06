@@ -7,10 +7,16 @@ export interface InfoModalState {
   title: string;
   message: string;
   translate_button?: ReactElement;
+  onClose?: () => void;
 }
 
 interface ModalContextType {
-  showInfoModal: (title: string, message: string, translate_button?: ReactElement) => void
+  showInfoModal: (
+    title: string,
+    message: string,
+    translate_button?: ReactElement,
+    onClose?: () => void
+  ) => void;
 }
 
 // Create a context for the modal
@@ -22,8 +28,13 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   /**
    * Display the modal to the screen with the given title and message.
    */
-  const showInfoModal = (title: string, message: string, translate_button?: ReactElement) => {
-    setModalState({ open: true, title, message, translate_button });
+  const showInfoModal = (
+    title: string,
+    message: string,
+    translate_button?: ReactElement,
+    onClose?: () => void
+  ) => {
+    setModalState({ open: true, title, message, translate_button, onClose });
   };
 
   const handleClose = () => {
@@ -34,7 +45,13 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       ttsAudio.pause();
       ttsAudio.remove();
     }
+    const onCloseCallback = modalState?.onClose;
     setModalState(null);
+    try {
+      onCloseCallback?.();
+    } catch (err) {
+      console.warn("Error executing modal onClose callback:", err);
+    }
   };
 
   return (
