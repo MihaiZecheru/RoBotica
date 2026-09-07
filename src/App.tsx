@@ -6,15 +6,20 @@ import Landing from './components/base/Landing';
 import Logout from './components/base/Logout';
 import { ModalProvider } from './components/base/useInfoModal';
 import AccountPage from './components/AccountPage';
-import Navily from './components/Navily';
 import SavedChatsPage from './components/SavedChatsPage';
 import StoriesSearch from './components/StoriesSearch';
 import StoryView from './components/StoryView';
-import CreateStoryPage from './components/CreateStoryPage';
 import MusicSearch from './components/MusicSearch';
 import SongView from './components/SongView';
 import VocabListPage from './components/VocabListPage';
 import VocabQuizPage from './components/VocabQuizPage';
+
+import AppLayout from './components/layout/AppLayout';
+import { Navigate } from 'react-router-dom';
+
+const ProtectedRoute = ({ component }: { component: React.ReactElement }) => (
+  <Authenticator component={<AppLayout>{component}</AppLayout>} />
+);
 
 function App() {
   return (
@@ -25,19 +30,18 @@ function App() {
           <Route path="/" element={ <Landing /> } />
           <Route path="/login" element={ <LoginRegister /> } />
           <Route path="/logout" element={ <Logout /> } />
-          <Route path="/navily" element={ <Navily /> } />
+          <Route path="/navily" element={ <Navigate to="/chat" replace /> } />
 
           { /* Restricted access - authentication required */ }
-          <Route path="/chat" element={ <Authenticator component={ <ChatPage /> } /> } />
-          <Route path="/chat/saved" element={ <Authenticator component={ <SavedChatsPage /> } /> } />
-          <Route path="/account" element={ <Authenticator component={ <AccountPage /> } /> } />
-          <Route path="/reading" element={ <Authenticator component={ <StoriesSearch /> } /> } />
-          <Route path="/music" element={ <Authenticator component={ <MusicSearch /> } /> } />
-          <Route path="/reading/:id" element={ <Authenticator component={ <StoryView /> } /> } />
-          <Route path="/music/:id" element={ <Authenticator component={ <SongView /> } /> } />
-          <Route path="/create-story" element={ <Authenticator component={ <CreateStoryPage /> } /> } />
-          <Route path="/vocab" element={ <Authenticator component={ <VocabListPage /> } /> } />
-          <Route path="/vocab/quiz" element={ <Authenticator component={ <VocabQuizPage /> } /> } />
+          <Route path="/chat" element={ <ProtectedRoute component={ <ChatPage /> } /> } />
+          <Route path="/chat/saved" element={ <ProtectedRoute component={ <SavedChatsPage /> } /> } />
+          <Route path="/account" element={ <ProtectedRoute component={ <AccountPage /> } /> } />
+          <Route path="/reading" element={ <ProtectedRoute component={ <StoriesSearch /> } /> } />
+          <Route path="/music" element={ <ProtectedRoute component={ <MusicSearch /> } /> } />
+          <Route path="/reading/:id" element={ <ProtectedRoute component={ <StoryView /> } /> } />
+          <Route path="/music/:id" element={ <ProtectedRoute component={ <SongView /> } /> } />
+          <Route path="/vocab" element={ <ProtectedRoute component={ <VocabListPage /> } /> } />
+          <Route path="/vocab/quiz" element={ <ProtectedRoute component={ <VocabQuizPage /> } /> } />
         </Routes>
       </Router>
     </ModalProvider>

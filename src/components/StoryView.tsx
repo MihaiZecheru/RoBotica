@@ -1,4 +1,3 @@
-import { Button } from '@mui/material';
 import ClickableWord from './ClickableWord';
 import TLanguage from '../database/TLanguage';
 import '../styles/reading-page.css';
@@ -84,19 +83,6 @@ const StoryView = (_: AuthenticatedComponentDefaultProps) => {
               </div>
             )
           }
-      </div>
-      <div className='btn-container'>
-        <Button
-          variant='contained'
-          color='primary'
-          onClick={() => navigate('/reading')}
-          sx={{
-            marginTop: '1rem'
-          }}
-        >Back to search</Button>
-      </div>
-      <div style={{ position: 'fixed', bottom: '12px', right: '.75rem' }}>
-        <Button color="primary" onClick={() => navigate('/navily')}>Navily</Button>
       </div>
     </div>
   );

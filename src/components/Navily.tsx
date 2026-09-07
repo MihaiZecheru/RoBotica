@@ -1,22 +1,14 @@
 import { Stack, Box } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import '../styles/navily.css';
-import { GetUserID } from "../database/GetUser";
-
 const Navily = () => {
   const navigate = useNavigate();
-
-  const handleImgClick = async () => {
-    if ((await GetUserID()) === process.env.REACT_APP_ADMIN_ID) {
-      navigate('/create-story');
-    }
-  };
 
   return (
     <div className="navily-container">
       <Stack direction="column" spacing={2}>
         <div className="image-container">
-          <img src="/navily.png" style={{ width: '228px', height: '228px' }} onClick={handleImgClick} />
+          <img src="/navily.png" alt="Navily" style={{ width: '228px', height: '228px' }} />
         </div>
         <Box className="navily-item" onClick={() => navigate('/chat')}>Chat</Box>
         <Box className="navily-item" onClick={() => navigate('/reading')}>Reading</Box>

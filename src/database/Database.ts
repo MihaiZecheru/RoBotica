@@ -263,7 +263,8 @@ export default class Database {
         id: story.id as StoryID,
         language: story.language as TLanguage,
         title: story.title,
-        body: story.body
+        body: story.body,
+        cefr_level: story.cefr_level || undefined
       };
     });
   }
@@ -280,7 +281,8 @@ export default class Database {
       .insert([{
         language: story.language,
         title: story.title,
-        body: story.body
+        body: story.body,
+        cefr_level: story.cefr_level
       }])
       .select('id');
 
@@ -363,7 +365,8 @@ export default class Database {
       id: data[0].id as StoryID,
       language: data[0].language as TLanguage,
       title: data[0].title,
-      body: data[0].body
+      body: data[0].body,
+      cefr_level: data[0].cefr_level || undefined
     }
   }
 
@@ -383,7 +386,8 @@ export default class Database {
 
     return (data || []).map((s: any) => ({
       ...s,
-      lyrics: s.lyrics ? s.lyrics.replace(/\r/g, '') : ''
+      lyrics: s.lyrics ? s.lyrics.replace(/\r/g, '') : '',
+      has_synced_lyrics: s.has_synced_lyrics ?? /\[\d{2}:\d{2}\.\d{2,3}\]/.test(s.lyrics || '')
     })) as TSong[];
   }
 
@@ -393,6 +397,7 @@ export default class Database {
     youtube_video_id: string): Promise<{ id: SongID, isNew: boolean }> {
     let existingId: SongID | null = null;
     const cleanLyrics = (lyrics || '').replace(/\r/g, '');
+    const has_synced_lyrics = /\[\d{2}:\d{2}\.\d{2,3}\]/.test(cleanLyrics);
 
     // 1. Check if song exists by youtube_video_id
     if (youtube_video_id) {
@@ -433,7 +438,8 @@ export default class Database {
           lyrics: cleanLyrics,
           thumbnail_url: thumbnail_url || `https://i.ytimg.com/vi/${youtube_video_id}/hqdefault.jpg`,
           image_url: image_url || `https://i.ytimg.com/vi/${youtube_video_id}/maxresdefault.jpg`,
-          youtube_video_id
+          youtube_video_id,
+          has_synced_lyrics
         })
         .eq('id', existingId);
 
@@ -456,7 +462,8 @@ export default class Database {
         lyrics: cleanLyrics,
         thumbnail_url: thumbnail_url || `https://i.ytimg.com/vi/${youtube_video_id}/hqdefault.jpg`,
         image_url: image_url || `https://i.ytimg.com/vi/${youtube_video_id}/maxresdefault.jpg`,
-        youtube_video_id
+        youtube_video_id,
+        has_synced_lyrics
       }])
       .select('id');
 
@@ -527,6 +534,32 @@ export default class Database {
     if (error) {
       console.error(error);
       throw error;
+    }
+  }
+
+  public static async IsWordInVocabList(word: string, language: TLanguage): Promise<boolean> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      let query = supabase
+        .from('VocabList')
+        .select('word')
+        .eq('word', word)
+        .eq('language', language);
+
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
+
+      const { data, error } = await query.limit(1);
+
+      if (error || !data) {
+        return false;
+      }
+
+      return data.length > 0;
+    } catch {
+      return false;
     }
   }
 
@@ -617,5 +650,48 @@ export default class Database {
     }
 
     return newTotal;
+  }
+
+  /**
+   * Delete all conversations and messages belonging to a user.
+   * 
+   * @param user_id The ID of the user whose conversations will be deleted
+   */
+  public static async DeleteAllUserConversations(user_id: UserID): Promise<void> {
+    // Find all conversations for the user
+    const { data: conversations, error: fetchError } = await supabase
+      .from('Conversations')
+      .select('id')
+      .eq('user_id', user_id);
+
+    if (fetchError) {
+      console.error('Error fetching conversations to delete:', fetchError);
+      throw fetchError;
+    }
+
+    if (conversations && conversations.length > 0) {
+      const conversationIds = conversations.map((c: any) => c.id);
+
+      // Delete messages in these conversations (and cascade will handle GrammarAndSpellchecks)
+      const { error: messagesError } = await supabase
+        .from('Messages')
+        .delete()
+        .in('conversation_id', conversationIds);
+
+      if (messagesError) {
+        console.warn('Warning deleting messages:', messagesError.message);
+      }
+    }
+
+    // Delete the conversations themselves
+    const { error: convError } = await supabase
+      .from('Conversations')
+      .delete()
+      .eq('user_id', user_id);
+
+    if (convError) {
+      console.error('Error deleting conversations:', convError);
+      throw convError;
+    }
   }
 }

@@ -41,6 +41,9 @@ const ClickableSentence = ({ language, sentence, story_id }: Props) => {
           if (el) el.remove();
           setIsPlaying(false);
         };
+      }).catch((err) => {
+        console.error("Failed to play TTS:", err);
+        setIsPlaying(false);
       });
     }
 

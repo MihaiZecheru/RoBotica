@@ -56,7 +56,7 @@ const language_codes = {
  * @returns {Buffer} audio: the audio data of the spoken
  */
 app.post('/text-to-speech', async (req, res) => {
-  const text = req.body.text;
+  let text = req.body.text;
   const language = req.body.language;
   const ssml = req.body?.ssml || false;
 
@@ -74,6 +74,19 @@ app.post('/text-to-speech', async (req, res) => {
 
   const client = new TextToSpeechClient();
 
+  if (ssml) {
+    // Strip unknown/unsupported tags from SSML while preserving valid ones like <speak>, </speak>, <break .../>
+    text = text.replace(/<\/?(?!speak\b|break\b)[^>]*>/gi, '');
+    // Escape unescaped ampersands
+    text = text.replace(/&(?!(amp|lt|gt|quot|apos);)/g, '&amp;');
+    if (!text.startsWith('<speak>')) {
+      text = `<speak>${text}`;
+    }
+    if (!text.endsWith('</speak>')) {
+      text = `${text}</speak>`;
+    }
+  }
+
   const request = {
     input: ssml ? { ssml: text } : { text },
     voice: { languageCode: language_codes[language], ssmlGender: 'MALE' },
@@ -83,9 +96,28 @@ app.post('/text-to-speech', async (req, res) => {
   try {
     const [response] = await client.synthesizeSpeech(request);
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.send(response.audioContent);
+    return res.send(response.audioContent);
   } catch (error) {
     console.error('Text-to-Speech Error:', error);
+
+    // Fallback: If SSML synthesis failed, attempt plain text synthesis
+    if (ssml) {
+      try {
+        console.warn('Attempting fallback to plain text synthesis...');
+        const plainText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const fallbackRequest = {
+          input: { text: plainText },
+          voice: { languageCode: language_codes[language], ssmlGender: 'MALE' },
+          audioConfig: { audioEncoding: 'MP3' },
+        };
+        const [fallbackResponse] = await client.synthesizeSpeech(fallbackRequest);
+        res.setHeader('Content-Type', 'audio/mpeg');
+        return res.send(fallbackResponse.audioContent);
+      } catch (fallbackError) {
+        console.error('Fallback plain text synthesis error:', fallbackError);
+      }
+    }
+
     res.status(500).send(error.message || 'Failed to process request - internal server error');
   }
 });
@@ -206,14 +238,14 @@ If the word has multiple meanings, use one meaning for the first sentence, and a
 
 Response format is strictly the following, you must use the format exactly as is:
 
-WordTranslation:
-Example1:
-Example1Translation:
-Example2:
-Example2Translation:
+WordTranslation: <translation>
+Example1: <example sentence 1>
+Example1Translation: <example sentence 1 translation>
+Example2: <example sentence 2>
+Example2Translation: <example sentence 2 translation>
 
-Include punctuation in sentences. Do not wrap in quotes or anything.
-Have no line breaks. <x> is the value.`;
+Include standard punctuation in sentences. Do not wrap in quotes or code blocks.
+Put each field on its own single line without any XML tags or angle brackets.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -225,14 +257,15 @@ Have no line breaks. <x> is the value.`;
     if (!match) {
       return res.status(500).send('Could not interpret response from AI.');
     }
+    const clean = (val) => (val || '').replace(/<[^>]*>/g, '').trim();
     res.json({
       word,
       language,
-      translation: match[1].trim(),
-      example_sentence1: match[2].trim(),
-      example_sentence1_translation: match[3].trim(),
-      example_sentence2: match[4].trim(),
-      example_sentence2_translation: match[5].trim()
+      translation: clean(match[1]),
+      example_sentence1: clean(match[2]),
+      example_sentence1_translation: clean(match[3]),
+      example_sentence2: clean(match[4]),
+      example_sentence2_translation: clean(match[5])
     });
   } catch (error) {
     console.error('Error in /api/bot/translate-word:', error);

@@ -266,15 +266,14 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
 
           <div className='chat-input-box'>
             <div style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '.5rem' }}>
-              <Tooltip title="Open navily" placement="top-start">
+              <Tooltip title="Account" placement="top-start">
                 <Avatar
                   className="chat-avatar"
                   alt='pfp'
                   src={user?.user_metadata.avatar_url || '/default-user-avatar.png'}
                   sx={{ width: "27px!important", height: "27px!important", cursor: 'pointer' }}
                   onClick={() => {
-                    sessionStorage.clear();
-                    navigate('/navily');
+                    navigate('/account');
                   }}
                 />
               </Tooltip>
@@ -308,22 +307,13 @@ const ChatPage = ({ user, user_settings }: AuthenticatedComponentDefaultProps) =
       {
         /* only show button if user is not on mobile */
         !isMobile() &&
-        <div style={{ position: 'fixed', bottom: '1rem', left: '1rem' }}>
+        <div style={{ position: 'fixed', bottom: '1rem', right: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
           <Button type='button' onClick={createNewConversation}>New Conversation</Button>
           <span style={{ color: 'var(--primary-blue)' }}>●</span>
           <Tooltip title={`Quickly look up a word in ${user_settings?.language} (Ctrl+Space)`}>
             <Button type='button' onClick={() => setWordSearchModalIsOpen(true)}>Word Lookup</Button>
           </Tooltip>
         </div>
-      }
-
-      {
-        /* only show button if user is not on mobile */
-        !isMobile() &&
-        <Button type='button' onClick={() => {
-          sessionStorage.clear();
-          navigate('/navily');
-        }} sx={{ position: 'fixed', bottom: '1rem', right: '1rem' }}>Navily</Button>
       }
     </div>
   );

@@ -8,6 +8,7 @@ export interface InfoModalState {
   message: string;
   translate_button?: ReactElement;
   onClose?: () => void;
+  extraActions?: React.ReactNode;
 }
 
 interface ModalContextType {
@@ -15,7 +16,8 @@ interface ModalContextType {
     title: string,
     message: string,
     translate_button?: ReactElement,
-    onClose?: () => void
+    onClose?: () => void,
+    extraActions?: React.ReactNode
   ) => void;
 }
 
@@ -32,9 +34,10 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     title: string,
     message: string,
     translate_button?: ReactElement,
-    onClose?: () => void
+    onClose?: () => void,
+    extraActions?: React.ReactNode
   ) => {
-    setModalState({ open: true, title, message, translate_button, onClose });
+    setModalState({ open: true, title, message, translate_button, onClose, extraActions });
   };
 
   const handleClose = () => {
@@ -119,8 +122,10 @@ const InfoModal: React.FC<InfoModalProps> = ({ state, onClose }) => {
           {state?.message || ''}
         </DialogContentText>
       </DialogContent>
-      <DialogActions>
+      <DialogActions sx={{ padding: '8px 16px 12px', gap: '4px' }}>
+        {state?.extraActions}
         <Button
+          id="info-modal-close-button"
           ref={closeButtonRef}
           autoFocus
           onClick={onClose}

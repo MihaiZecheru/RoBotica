@@ -1,0 +1,27 @@
+/* Music Search Page Styles (MusicSearch.tsx) */
+.song-card-modern {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.song-card-modern:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 132, 255, 0.14), 0 2px 6px -1px rgba(0, 0, 0, 0.04) !important;
+}
+
+.song-card-modern:hover .song-card-title {
+  color: var(--primary-blue) !important;
+}
+
+.song-card-modern:hover .song-card-arrow {
+  transform: translateX(4px);
+  color: var(--primary-blue) !important;
+}
+
+.song-card-modern:hover .song-artwork-thumb {
+  transform: scale(1.04);
+}
+
+.song-artwork-thumb {
+  transition: transform 0.25s ease;
+}

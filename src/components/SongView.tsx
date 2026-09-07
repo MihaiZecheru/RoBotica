@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import TSong from "../database/TSong";
 import { AuthenticatedComponentDefaultProps } from "./base/Authenticator";
 import Database from "../database/Database";
@@ -48,17 +48,28 @@ function formatTime(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-function create_embed(video_id: string, frame_title: string) {
+function create_embed(
+  video_id: string,
+  frame_title: string,
+  iframeRef?: React.RefObject<HTMLIFrameElement>,
+  onLoad?: () => void
+) {
+  const origin = typeof window !== 'undefined' && window.location?.origin
+    ? `&origin=${encodeURIComponent(window.location.origin)}`
+    : '';
   return (
     <iframe
+      ref={iframeRef}
+      id="song-youtube-iframe"
       width="100%"
       height="260"
       style={{ borderRadius: '16px', border: 'none' }}
-      src={`https://www.youtube.com/embed/${video_id}?autoplay=1&enablejsapi=1`}
+      src={`https://www.youtube.com/embed/${video_id}?autoplay=1&enablejsapi=1${origin}`}
       title={frame_title}
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       referrerPolicy="strict-origin-when-cross-origin"
-      allowFullScreen={false}>
+      allowFullScreen={false}
+      onLoad={onLoad}>
     </iframe>
   );
 }
@@ -79,7 +90,10 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const activeLineRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const navigate = useNavigate();
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const isYouTubePlayingRef = useRef<boolean>(true);
+  const useYouTubeFallbackRef = useRef<boolean>(useYouTubeFallback);
+  useYouTubeFallbackRef.current = useYouTubeFallback;
 
   useEffect(() => {
     Database.GetSong(id as SongID).then((_song: TSong) => {
@@ -88,44 +102,17 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
     });
   }, [id]);
 
-  // Load and parse lyrics
+  // Load and parse lyrics directly from database
   useEffect(() => {
     if (!song) return;
 
-    setLyricsData({ synced: [], plain: '', loading: true });
-
-    // 1. First check if song.lyrics already contains LRC timestamps
     const cleanDbLyrics = (song.lyrics || '').replace(/\r/g, '');
     const dbParsed = parseLRC(cleanDbLyrics);
     if (dbParsed.length > 0) {
       setLyricsData({ synced: dbParsed, plain: '', loading: false });
-      return;
+    } else {
+      setLyricsData({ synced: [], plain: cleanDbLyrics, loading: false });
     }
-
-    // 2. Fetch synchronized lyrics from LRCLIB via backend
-    const cleanTitle = song.title.replace(/\(.*\)|\[.*\]/g, '').trim();
-    const cleanArtist = song.artist.split(',')[0].trim();
-
-    fetch(getApiUrl(`/api/lyrics?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(cleanArtist)}`))
-      .then(res => res.json())
-      .then(data => {
-        if (data.syncedLyrics) {
-          const parsed = parseLRC(data.syncedLyrics.replace(/\r/g, ''));
-          if (parsed.length > 0) {
-            setLyricsData({ synced: parsed, plain: '', loading: false });
-            return;
-          }
-        }
-        if (data.plainLyrics) {
-          setLyricsData({ synced: [], plain: data.plainLyrics.replace(/\r/g, ''), loading: false });
-        } else {
-          setLyricsData({ synced: [], plain: cleanDbLyrics, loading: false });
-        }
-      })
-      .catch(err => {
-        console.warn("Failed to fetch synced lyrics from API, using DB lyrics:", err);
-        setLyricsData({ synced: [], plain: cleanDbLyrics, loading: false });
-      });
   }, [song]);
 
   const isSynchronized = lyricsData.synced.length > 0 && !useYouTubeFallback;
@@ -171,22 +158,79 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
 
   const wasPlayingRef = useRef<boolean>(false);
 
-  const pausePlayback = () => {
-    if (audioRef.current && !audioRef.current.paused) {
-      wasPlayingRef.current = true;
-      audioRef.current.pause();
+  const getIframe = (): HTMLIFrameElement | null => {
+    return (
+      iframeRef.current ||
+      (document.getElementById('song-youtube-iframe') as HTMLIFrameElement | null) ||
+      (document.querySelector('.song-player-panel iframe') as HTMLIFrameElement | null)
+    );
+  };
+
+  const playYouTube = () => {
+    const iframe = getIframe();
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
     }
-    if (useYouTubeFallback) {
-      const iframe = document.querySelector('.song-player-panel iframe') as HTMLIFrameElement | null;
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+  };
+
+  const pauseYouTube = () => {
+    const iframe = getIframe();
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+    }
+  };
+
+  const toggleYouTube = () => {
+    if (isYouTubePlayingRef.current) {
+      pauseYouTube();
+      isYouTubePlayingRef.current = false;
+    } else {
+      playYouTube();
+      isYouTubePlayingRef.current = true;
+    }
+  };
+
+  const toggleAudio = () => {
+    if (audioRef.current) {
+      if (audioRef.current.paused) {
+        audioRef.current.play().catch(err => console.warn("Failed to play audio:", err));
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  };
+
+  const togglePlayback = () => {
+    if (useYouTubeFallbackRef.current) {
+      toggleYouTube();
+    } else {
+      toggleAudio();
+    }
+  };
+  const togglePlaybackRef = useRef(togglePlayback);
+  togglePlaybackRef.current = togglePlayback;
+
+  const pausePlayback = () => {
+    if (useYouTubeFallbackRef.current) {
+      if (isYouTubePlayingRef.current) {
+        wasPlayingRef.current = true;
+        pauseYouTube();
+        isYouTubePlayingRef.current = false;
+      }
+    } else {
+      if (audioRef.current && !audioRef.current.paused) {
+        wasPlayingRef.current = true;
+        audioRef.current.pause();
       }
     }
   };
 
   const resumePlayback = () => {
     if (wasPlayingRef.current) {
-      if (audioRef.current) {
+      if (useYouTubeFallbackRef.current) {
+        playYouTube();
+        isYouTubePlayingRef.current = true;
+      } else if (audioRef.current) {
         audioRef.current.play().catch(err => {
           console.warn("Failed to resume playback:", err);
         });
@@ -200,9 +244,119 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
       if (audioRef.current && !audioRef.current.paused) {
         audioRef.current.pause();
       }
+    } else {
+      pauseYouTube();
+      isYouTubePlayingRef.current = false;
     }
     setUseYouTubeFallback(!useYouTubeFallback);
   };
+
+  // Keep YouTube player state synchronized via postMessage events
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      let data = event.data;
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
+        }
+      }
+      if (!data) return;
+
+      let state: number | undefined;
+      if (data.event === 'onStateChange' && typeof data.info === 'number') {
+        state = data.info;
+      } else if (data.event === 'infoDelivery' && data.info && typeof data.info.playerState === 'number') {
+        state = data.info.playerState;
+      }
+
+      if (state !== undefined) {
+        // YT.PlayerState: 1 = PLAYING, 2 = PAUSED, 0 = ENDED
+        if (state === 1) {
+          isYouTubePlayingRef.current = true;
+        } else if (state === 2 || state === 0) {
+          isYouTubePlayingRef.current = false;
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
+  // Notify YouTube iframe to send state change events when YouTube fallback is active
+  useEffect(() => {
+    if (useYouTubeFallback) {
+      isYouTubePlayingRef.current = true;
+
+      const notifyListening = () => {
+        const iframe = getIframe();
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage('{"event":"listening"}', '*');
+        }
+      };
+
+      notifyListening();
+      const t1 = setTimeout(notifyListening, 500);
+      const t2 = setTimeout(notifyListening, 1500);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [useYouTubeFallback, song]);
+
+  // Pressing space while focused anywhere on /music should pause or unpause the video
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only respond to Space bar
+      if (e.code !== 'Space' && e.key !== ' ') {
+        return;
+      }
+
+      // Ignore if modifier keys are pressed
+      if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) {
+        return;
+      }
+
+      // Prevent repeated triggers when holding down space
+      if (e.repeat) {
+        return;
+      }
+
+      // Don't hijack space if focused on an editable element (e.g. input, textarea)
+      const activeEl = document.activeElement as HTMLElement | null;
+      if (activeEl) {
+        const tag = activeEl.tagName.toUpperCase();
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || activeEl.isContentEditable) {
+          return;
+        }
+      }
+
+      // If a modal/dialog is open, do not toggle playback
+      if (document.querySelector('.MuiDialog-root')) {
+        return;
+      }
+
+      // Prevent default browser behavior (e.g. scrolling the page or activating a focused button)
+      e.preventDefault();
+
+      // If a button has focus, blur it so it doesn't trigger on space
+      if (activeEl && (activeEl.tagName === 'BUTTON' || activeEl.getAttribute('role') === 'button')) {
+        activeEl.blur();
+      }
+
+      togglePlaybackRef.current();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   if (loading || !song) {
     return <Loading />;
@@ -225,9 +379,6 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
             >
               {useYouTubeFallback ? "Stream Audio" : "YouTube Video"}
             </Button>
-            <Button size="small" variant="contained" onClick={() => navigate('/navily')}>
-              Navily
-            </Button>
           </div>
         </div>
 
@@ -237,7 +388,16 @@ const SongView = (_: AuthenticatedComponentDefaultProps) => {
           <div className="song-player-panel">
             {useYouTubeFallback ? (
               <div style={{ width: '100%' }}>
-                {create_embed(song.youtube_video_id, `${song.title} by ${song.artist}`)}
+                {create_embed(
+                  song.youtube_video_id,
+                  `${song.title} by ${song.artist}`,
+                  iframeRef,
+                  () => {
+                    if (iframeRef.current?.contentWindow) {
+                      iframeRef.current.contentWindow.postMessage('{"event":"listening"}', '*');
+                    }
+                  }
+                )}
                 <p style={{ marginTop: '12px', fontSize: '0.85rem', color: '#666' }}>
                   Playing from YouTube embed
                 </p>

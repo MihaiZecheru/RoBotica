@@ -80,9 +80,74 @@ async function getLyrics(track, art) {
   return { type: 'none', lyrics: '' };
 }
 
+const readline = require('readline');
+
+async function promptUserForLyrics() {
+  console.log('\n\x1b[33m[No Lyrics Found on LRCLIB]\x1b[0m');
+  console.log('How would you like to provide lyrics for this song?');
+  console.log('1) Paste lyrics directly (type "EOF" on an empty line or press Ctrl+D when finished)');
+  console.log('2) Specify a text file path');
+  console.log('3) Skip (save without lyrics)');
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  const question = (q) => new Promise(resolve => rl.question(q, resolve));
+
+  const choice = (await question('Enter choice [1-3, default: 1]: ')).trim() || '1';
+
+  if (choice === '2') {
+    const filePath = (await question('Enter path to lyrics file: ')).trim();
+    rl.close();
+    if (filePath && fs.existsSync(filePath)) {
+      return fs.readFileSync(filePath, 'utf-8');
+    } else {
+      console.log('File not found or invalid. Proceeding without lyrics.');
+      return '';
+    }
+  } else if (choice === '3') {
+    rl.close();
+    return '';
+  }
+
+  // Option 1: Paste directly
+  console.log('\nPaste your lyrics below. Type "EOF" on an empty line to finish:');
+  const lines = [];
+  return new Promise(resolve => {
+    rl.on('line', (line) => {
+      if (line.trim() === 'EOF') {
+        rl.close();
+        resolve(lines.join('\n'));
+      } else {
+        lines.push(line);
+      }
+    });
+    rl.on('close', () => {
+      resolve(lines.join('\n'));
+    });
+  });
+}
+
 async function main() {
   const { type: lyricsType, lyrics } = await getLyrics(title, artist);
-  const cleanLyrics = lyrics ? lyrics.replace(/\r/g, '') : '';
+  let finalLyrics = lyrics;
+
+  if (!finalLyrics || !finalLyrics.trim()) {
+    finalLyrics = await promptUserForLyrics();
+  }
+
+  const cleanLyrics = finalLyrics ? finalLyrics.replace(/\r/g, '').trim() : '';
+  const has_synced_lyrics = /\[\d{2}:\d{2}\.\d{2,3}\]/.test(cleanLyrics);
+
+  if (has_synced_lyrics) {
+    console.log('\x1b[32m[Lyrics] Synchronized LRC timestamps detected (has_synced_lyrics = true).\x1b[0m');
+  } else if (cleanLyrics) {
+    console.log('\x1b[33m[Lyrics] Plain lyrics detected (has_synced_lyrics = false).\x1b[0m');
+  } else {
+    console.log('\x1b[90m[Lyrics] No lyrics provided (has_synced_lyrics = false).\x1b[0m');
+  }
 
   if (!supabaseKey) {
     console.error('\x1b[31m[Error] Missing Supabase API Key. Please set SUPABASE_SERVICE_ROLE_KEY or REACT_APP_SUPABASE_ANON_KEY in your .env file.\x1b[0m');
@@ -120,7 +185,8 @@ async function main() {
         lyrics: cleanLyrics,
         thumbnail_url,
         image_url,
-        youtube_video_id
+        youtube_video_id,
+        has_synced_lyrics
       })
       .eq('id', existingSongs[0].id);
 
@@ -143,7 +209,8 @@ async function main() {
       lyrics: cleanLyrics,
       thumbnail_url,
       image_url,
-      youtube_video_id
+      youtube_video_id,
+      has_synced_lyrics
     }])
     .select('id');
 

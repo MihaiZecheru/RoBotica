@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 
 interface Props {
@@ -6,15 +6,24 @@ interface Props {
   handleChange: (new_value: string) => void;
   _label: string;
   starting_value: string;
+  value?: string;
 }
 
-const Dropdown = ({ options, handleChange, _label, starting_value }: Props) => {
-  const [selectedValue, setSelectedValue] = useState(starting_value);
+const Dropdown = ({ options, handleChange, _label, starting_value, value }: Props) => {
+  const [selectedValue, setSelectedValue] = useState(value !== undefined ? value : starting_value);
+
+  useEffect(() => {
+    if (value !== undefined) {
+      setSelectedValue(value);
+    }
+  }, [value]);
 
   const _handleChange = (event: any) => {
-    const value = event.target.value as string;
-    setSelectedValue(value);
-    handleChange(value);
+    const nextValue = event.target.value as string;
+    if (value === undefined) {
+      setSelectedValue(nextValue);
+    }
+    handleChange(nextValue);
   };
 
   return (
@@ -22,7 +31,7 @@ const Dropdown = ({ options, handleChange, _label, starting_value }: Props) => {
       <InputLabel id={"dropdown-label" + _label}>{_label}</InputLabel>
       <Select
         labelId={"dropdown-label" + _label}
-        value={selectedValue}
+        value={value !== undefined ? value : selectedValue}
         onChange={_handleChange}
         label={_label}
       >

@@ -11,6 +11,7 @@ interface TSong {
   thumbnail_url: string;
   image_url: string;
   youtube_video_id: string;
+  has_synced_lyrics?: boolean;
 }
 
 export default TSong;

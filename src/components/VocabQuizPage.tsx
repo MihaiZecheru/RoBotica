@@ -281,7 +281,7 @@ const VocabQuizPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
         sx={{
           backgroundColor: '#ffffff',
           minHeight: '100vh',
-          width: '100vw',
+          width: '100%',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
@@ -305,7 +305,7 @@ const VocabQuizPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
       sx={{
         backgroundColor: '#ffffff',
         minHeight: '100vh',
-        width: '100vw',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -581,22 +581,6 @@ const VocabQuizPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
         }}
       >
         Exit Quiz
-      </Button>
-
-      <Button
-        type="button"
-        onClick={() => navigate('/navily')}
-        sx={{
-          position: 'fixed',
-          bottom: '1.25rem',
-          right: '1.5rem',
-          color: 'var(--primary-blue)',
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: '0.9rem',
-        }}
-      >
-        Navily
       </Button>
     </Box>
   );

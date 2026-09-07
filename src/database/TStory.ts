@@ -6,6 +6,7 @@ type TStory = {
   language: TLanguage;
   title: string;
   body: string;
+  cefr_level?: string;
 }
 
 export default TStory;

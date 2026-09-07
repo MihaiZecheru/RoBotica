@@ -1,7 +1,7 @@
-import { IconButton, Tooltip } from "@mui/material";
+import { CircularProgress, IconButton, Tooltip } from "@mui/material";
 import CampaignIcon from '@mui/icons-material/Campaign';
 import TLanguage from "../database/TLanguage";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import TextToSpeechAPI from "../functions/TextToSpeechAPI";
 
 export const TTS_AUDIO_ID = "text-to-speech-audio";
@@ -12,11 +12,12 @@ export const stopActiveTTS = () => {
     activeTTSAudio.pause();
     activeTTSAudio = null;
   }
-  const existing = document.getElementById(TTS_AUDIO_ID) as HTMLAudioElement | null;
-  if (existing) {
-    existing.pause();
-    existing.remove();
-  }
+  const elements = document.querySelectorAll(`audio#${TTS_AUDIO_ID}`);
+  elements.forEach((el) => {
+    const audioEl = el as HTMLAudioElement;
+    audioEl.pause();
+    audioEl.remove();
+  });
 };
 
 interface Props {
@@ -28,44 +29,68 @@ interface Props {
   ssml?: boolean;
 }
 
-const TextToSpeech = ({ text, language, ssml }: Props) => {
-  if (ssml === undefined) ssml = false;
-
+const TextToSpeech = ({ text, language, ssml = false }: Props) => {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
 
+  // Stop active TTS audio and revoke object URL when this component unmounts
   useEffect(() => {
     return () => {
       stopActiveTTS();
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+        audioUrlRef.current = null;
+      }
     };
-  }, [audio]);
+  }, []);
 
   const getSpeech = async () => {
     if (isLoading) return;
     setIsLoading(true);
 
     stopActiveTTS();
-    const blob: Blob = await TextToSpeechAPI(text, language, ssml || false);
-    const _audio = new Audio(URL.createObjectURL(blob));
-    _audio.id = TTS_AUDIO_ID;
-    document.body.appendChild(_audio);
-    activeTTSAudio = _audio;
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
 
-    setIsLoading(false);
-    setAudio(_audio);
-    setIsPlaying(true);
-    _audio.play().catch(() => {});
-    _audio.onended = () => {
-      if (activeTTSAudio === _audio) {
-        activeTTSAudio = null;
-      }
-      const existing = document.getElementById(TTS_AUDIO_ID);
-      if (existing) {
-        existing.remove();
-      }
+    try {
+      const blob: Blob = await TextToSpeechAPI(text, language, ssml);
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+
+      const _audio = new Audio(url);
+      _audio.id = TTS_AUDIO_ID;
+      document.body.appendChild(_audio);
+      activeTTSAudio = _audio;
+
+      _audio.onended = () => {
+        if (activeTTSAudio === _audio) {
+          activeTTSAudio = null;
+        }
+        _audio.remove();
+        setIsPlaying(false);
+      };
+
+      _audio.onerror = (e) => {
+        console.error("Audio playback error:", e);
+        if (activeTTSAudio === _audio) {
+          activeTTSAudio = null;
+        }
+        _audio.remove();
+        setIsPlaying(false);
+      };
+
+      setIsPlaying(true);
+      await _audio.play();
+    } catch (err) {
+      console.error("Text-to-speech error:", err);
+      stopActiveTTS();
       setIsPlaying(false);
-    };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const stopAudio = () => {
@@ -74,14 +99,23 @@ const TextToSpeech = ({ text, language, ssml }: Props) => {
   };
 
   return (
-    <Tooltip title={isPlaying ? "Stop listening" : "Listen"} placement="top">
-      <IconButton aria-label="read text" onClick={isPlaying ? stopAudio : getSpeech}>
-        {
-          <CampaignIcon color={isPlaying ? "primary" : "inherit"} />
-        }
-      </IconButton>
+    <Tooltip title={isPlaying ? "Stop listening" : (isLoading ? "Loading audio..." : "Listen")} placement="top">
+      <span>
+        <IconButton
+          aria-label="read text"
+          onClick={isPlaying ? stopAudio : getSpeech}
+          disabled={isLoading}
+          size="small"
+        >
+          {isLoading ? (
+            <CircularProgress size={20} color="inherit" />
+          ) : (
+            <CampaignIcon color={isPlaying ? "primary" : "inherit"} />
+          )}
+        </IconButton>
+      </span>
     </Tooltip>
   );
-}
- 
+};
+
 export default TextToSpeech;

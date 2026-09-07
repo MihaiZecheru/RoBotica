@@ -10,6 +10,7 @@ import Loading from "./Loading";
 import TextToSpeech, { stopActiveTTS, TTS_AUDIO_ID } from "./TextToSpeech";
 import TextToSpeechAPI from "../functions/TextToSpeechAPI";
 import isMobile from "../functions/isMobile";
+import AddVocabButton from "./AddVocabButton";
 
 interface Props {
   /**
@@ -54,6 +55,9 @@ const ClickableWord = ({ word, language, onTranslate, onCloseModal }: Props) => 
           if (el) el.remove();
           setIsPlaying(false);
         };
+      }).catch((err) => {
+        console.error("Failed to play TTS:", err);
+        setIsPlaying(false);
       });
     // If alt+click, the word is added to the user's vocab list
     } else if (e.altKey) {
@@ -88,19 +92,37 @@ const ClickableWord = ({ word, language, onTranslate, onCloseModal }: Props) => 
       }
 
       const showResult = () => {
+        const escapeXml = (unsafe: string) => {
+          return unsafe
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+        };
+        const cleanForSSML = (text: string) => escapeXml((text || '').replace(/<[^>]*>/g, '').trim());
+        const cleanWord = cleanForSSML(word_cleaned);
+        const s1 = cleanForSSML(response!.example_sentence1);
+        const s2 = cleanForSSML(response!.example_sentence2);
+        const ssmlParts = [cleanWord ? `${cleanWord}.` : ''];
+        if (s1) ssmlParts.push(s1);
+        if (s2) ssmlParts.push(s2);
+        const ssmlText = `<speak>${ssmlParts.filter(Boolean).join('<break time="1s" />')}</speak>`;
+
         showInfoModal(
           `${language} Translation`,
-          `"${word_cleaned}" means "${response!.translation}".\n\n
-           ${response!.example_sentence1}\n
-          (${response!.example_sentence1_translation})\n\n
-           ${response!.example_sentence2}\n
-          (${response!.example_sentence2_translation})`,
+          `"${word_cleaned}" means "${response!.translation.replace(/<[^>]*>/g, '').trim()}".\n\n
+           ${response!.example_sentence1.replace(/<[^>]*>/g, '').trim()}\n
+          (${response!.example_sentence1_translation.replace(/<[^>]*>/g, '').trim()})\n\n
+           ${response!.example_sentence2.replace(/<[^>]*>/g, '').trim()}\n
+          (${response!.example_sentence2_translation.replace(/<[^>]*>/g, '').trim()})`,
           <TextToSpeech
-            text={`<speak>${word_cleaned}.<break time="1s" />${response!.example_sentence1}<break time="1s" />${response!.example_sentence2}</speak>`}
+            text={ssmlText}
             language={language}
             ssml={true}
           />,
-          onCloseModal
+          onCloseModal,
+          <AddVocabButton word={word_cleaned} language={language} />
         );
         setCanBeClicked(true);
       };

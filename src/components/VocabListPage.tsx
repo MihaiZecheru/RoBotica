@@ -91,7 +91,7 @@ const VocabListPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
       sx={{
         backgroundColor: '#ffffff',
         minHeight: '100vh',
-        width: '100vw',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -350,22 +350,41 @@ const VocabListPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
                   <ClickableWord word={item.word} language={item.language} />
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 0.4,
-                      px: 1,
-                      py: 0.2,
-                      borderRadius: '12px',
-                      backgroundColor: (item.correct_count || 0) > 0 ? '#ecfdf5' : '#f1f5f9',
-                      color: (item.correct_count || 0) > 0 ? '#059669' : '#9ca3af',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                    }}
-                    title={`${item.correct_count || 0} correct, ${item.incorrect_count || 0} missed`}
-                  >
-                    ✓ {item.correct_count || 0}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.4,
+                        px: 1,
+                        py: 0.2,
+                        borderRadius: '12px',
+                        backgroundColor: (item.correct_count || 0) > 0 ? '#ecfdf5' : '#f1f5f9',
+                        color: (item.correct_count || 0) > 0 ? '#059669' : '#9ca3af',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                      }}
+                      title={`${item.correct_count || 0} correct`}
+                    >
+                      ✓ {item.correct_count || 0}
+                    </Box>
+                    <Box
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.4,
+                        px: 1,
+                        py: 0.2,
+                        borderRadius: '12px',
+                        backgroundColor: (item.incorrect_count || 0) > 0 ? '#fef2f2' : '#f1f5f9',
+                        color: (item.incorrect_count || 0) > 0 ? '#dc2626' : '#9ca3af',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                      }}
+                      title={`${item.incorrect_count || 0} incorrect`}
+                    >
+                      ✕ {item.incorrect_count || 0}
+                    </Box>
                   </Box>
 
                   {currentTab === 'active' ? (
@@ -415,23 +434,6 @@ const VocabListPage = ({ user, user_settings }: AuthenticatedComponentDefaultPro
           </Box>
         )}
       </Paper>
-
-      {/* Subtle bottom navigation */}
-      <Button
-        type="button"
-        onClick={() => navigate('/navily')}
-        sx={{
-          position: 'fixed',
-          bottom: '1.25rem',
-          right: '1.5rem',
-          color: 'var(--primary-blue)',
-          textTransform: 'none',
-          fontWeight: 600,
-          fontSize: '0.9rem',
-        }}
-      >
-        Navily
-      </Button>
     </Box>
   );
 };
