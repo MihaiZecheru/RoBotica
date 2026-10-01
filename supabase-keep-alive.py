@@ -1,6 +1,6 @@
 import requests
-
 import os
+from datetime import datetime
 
 # Helper to load .env file manually without external dependencies
 def load_env_manually():
@@ -16,18 +16,21 @@ def load_env_manually():
 
 load_env_manually()
 
-url = "https://lvelcoaxuksfeijhkqic.supabase.co/health"
+SUPABASE_URL = "https://lvelcoaxuksfeijhkqic.supabase.co"
 apikey = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("REACT_APP_SUPABASE_ANON_KEY") or ""
 
 headers = {
     "apikey": apikey,
-    "Authorization": f"Bearer {apikey}"
+    "Authorization": f"Bearer {apikey}",
+    "Accept": "application/json",
 }
 
+# Query the Songs table — a real DB call that counts as activity
+url = f"{SUPABASE_URL}/rest/v1/Songs?select=id&limit=1"
+
 try:
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=15)
     response.raise_for_status()
-    print("Status Code:", response.status_code)
-    print("Response:", response.text)
+    print(f"[{datetime.now().isoformat()}] Keep-alive OK — Status: {response.status_code}, Response: {response.text}")
 except requests.exceptions.RequestException as e:
-    print("Error querying health endpoint:", e)
+    print(f"[{datetime.now().isoformat()}] Keep-alive FAILED: {e}")
