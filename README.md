@@ -1,5 +1,11 @@
 # RoBotica
 
-Learn Spanish by chatting with AI!
+Learn Spanish by chatting with RoBotica AI.
 
-Supports other languages too (French, Italian, Portuguese, Romanian, German).
+Supports French, Italian, Portuguese, Romanian, German.
+
+Quick translations in both directions for individual words, sentences, or entire messages.
+
+Automatic grammar and spelling error detection for every message.
+
+Vocab quizzes, music with synchronized lyrics, custom stories.
